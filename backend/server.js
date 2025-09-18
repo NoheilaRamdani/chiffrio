@@ -27,17 +27,24 @@ io.on('connection', (socket) => {
 
   socket.on('joinRoom', (data) => {
     const room = rooms.get(data.roomId);
-    if (room && !room.players[2]) {
-      room.players[2] = data.pseudo;
-      socket.join(data.roomId);
-      socket.emit('roomJoined', { roomId: data.roomId, players: room.players });
-      io.to(data.roomId).emit('playerJoined', { players: room.players });
-    } else {
-      socket.emit('error', 'Salle pleine ou inexistante');
+    // ✅ Gestion des erreurs améliorée
+    if (!room) {
+      socket.emit('error', 'Cette salle n\'existe pas 🚫');
+      return;
     }
+    if (room.players[2]) {
+      socket.emit('error', 'Cette salle est déjà pleine 🚫');
+      return;
+    }
+
+    // ✅ Le joueur peut rejoindre
+    room.players[2] = data.pseudo;
+    socket.join(data.roomId);
+    socket.emit('roomJoined', { roomId: data.roomId, players: room.players });
+    // ✅ Notifie TOUS les joueurs de la room qu'un joueur a rejoint
+    io.to(data.roomId).emit('playerJoined', { players: room.players });
   });
 
-  // Dans server.js, corrige cette fonction :
   socket.on('setSecret', (data) => {
     const roomId = [...socket.rooms][1];
     const room = rooms.get(roomId);
@@ -59,22 +66,47 @@ io.on('connection', (socket) => {
     if (room && room.currentPlayer === data.player) {
       const secret = room.secrets[data.player === 1 ? 2 : 1];
       let wellPlaced = 0, misplaced = 0;
+
+      // ✅ Amélioration de l'algorithme de comparaison
       const secretArr = secret.split('');
       const guessArr = data.guess.split('');
+      const secretUsed = new Array(4).fill(false);
+      const guessUsed = new Array(4).fill(false);
+
+      // D'abord, compter les bien placés
       for (let i = 0; i < 4; i++) {
-        if (secretArr[i] === guessArr[i]) wellPlaced++;
-        else if (secretArr.includes(guessArr[i])) misplaced++;
+        if (secretArr[i] === guessArr[i]) {
+          wellPlaced++;
+          secretUsed[i] = true;
+          guessUsed[i] = true;
+        }
       }
+
+      // Ensuite, compter les mal placés
+      for (let i = 0; i < 4; i++) {
+        if (!guessUsed[i]) {
+          for (let j = 0; j < 4; j++) {
+            if (!secretUsed[j] && secretArr[j] === guessArr[i]) {
+              misplaced++;
+              secretUsed[j] = true;
+              break;
+            }
+          }
+        }
+      }
+
       data.feedback = { wellPlaced, misplaced };
       room.history[data.player].push(data);
       io.to(roomId).emit('feedback', data);
-      room.currentPlayer = data.player === 1 ? 2 : 1;
-      if (data.feedback.wellPlaced === 4) {
-        io.to(roomId).emit('gameWon', { player: data.player });
+
+      // ✅ Changer le joueur actuel seulement si le jeu continue
+      if (data.feedback.wellPlaced !== 4) {
+        room.currentPlayer = data.player === 1 ? 2 : 1;
       }
     }
   });
-  // Ajoute ça dans server.js
+
+  // ✅ Fonction pour vérifier si le jeu peut commencer
   socket.on('checkGameStart', (data) => {
     const room = rooms.get(data.roomId);
     if (room && room.secrets[1] && room.secrets[2]) {
@@ -84,6 +116,10 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+    // ✅ Optionnel : nettoyer les rooms vides
+    for (const [roomId, room] of rooms.entries()) {
+      // Si tu veux gérer la déconnexion, tu peux ajouter la logique ici
+    }
   });
 });
 

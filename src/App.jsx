@@ -30,24 +30,34 @@ function App() {
     const newSocket = io('http://localhost:3001');
     setSocket(newSocket);
 
+    // ✅ Gestion directe des événements sans passer par handleSocketEvent
     newSocket.on('roomCreated', (data) => {
       console.log('Room created:', data);
-      handleSocketEvent('roomCreated', data);
+      setRoomId(data.roomId);
+      setGameState('hosting');
+      setMessage(`🎉 Salle créée ! Code: ${data.roomId}`);
+      setPlayers({ player1: pseudo, player2: '' });
+      setMyPlayerId(1);
     });
 
     newSocket.on('roomJoined', (data) => {
       console.log('Room joined:', data);
-      handleSocketEvent('roomJoined', data);
+      setRoomId(data.roomId);
+      setGameState('setup');
+      setPlayers(data.players);
+      setMessage('✨ Connecté ! Choisis ton nombre secret.');
+      setMyPlayerId(2);
     });
 
     newSocket.on('playerJoined', (data) => {
       console.log('Player joined:', data);
-      handleSocketEvent('playerJoined', data);
+      setPlayers(data.players);
+      setMessage('🚀 Joueur 2 connecté ! Choisissez vos nombres secrets.');
+      setGameState('setup');
     });
 
     newSocket.on('secretSet', (data) => {
       console.log('Secret set:', data);
-      // L'autre joueur a défini son secret
       setOpponentReady(true);
       if (imReady) {
         newSocket.emit('checkGameStart', { roomId });
@@ -56,71 +66,53 @@ function App() {
 
     newSocket.on('gameStart', () => {
       console.log('Game started');
-      handleSocketEvent('gameStart', {});
+      setGameState('playing');
+      setCurrentPlayer(1); // ✅ Le joueur 1 commence toujours
+      setMessage(`🎮 C'est parti ! Au tour du Joueur 1`);
     });
 
     newSocket.on('feedback', (data) => {
       console.log('Feedback received:', data);
-      handleSocketEvent('feedback', data);
+      const newEntry = {
+        guess: data.guess,
+        player: data.player,
+        wellPlaced: data.feedback.wellPlaced,
+        misplaced: data.feedback.misplaced
+      };
+      setHistory(prev => [...prev, newEntry]);
+
+      if (data.feedback.wellPlaced === gameSettings.digits) {
+        setGameState('won');
+        setMessage(`🏆 Joueur ${data.player} a gagné ! Félicitations !`);
+      } else {
+        const nextPlayer = data.player === 1 ? 2 : 1;
+        setCurrentPlayer(nextPlayer);
+        setMessage(`🎯 Au tour du Joueur ${nextPlayer}`);
+        setGuess(['', '', '', '']);
+      }
+    });
+
+    newSocket.on('error', (error) => {
+      console.log('Socket error:', error);
+      setMessage(`❌ ${error}`);
     });
 
     return () => newSocket.close();
-  }, [roomId, imReady]);
+  }, [pseudo]); // ✅ Ne dépend que de pseudo
 
-  const handleSocketEvent = (event, data) => {
-    console.log('Socket event:', event, data);
-
-    switch (event) {
-      case 'roomCreated':
-        setRoomId(data.roomId);
-        setGameState('hosting');
-        setMessage(`🎉 Salle créée ! Code: ${data.roomId}`);
-        setPlayers({ player1: pseudo, player2: '' });
-        setMyPlayerId(1);
-        break;
-
-      case 'roomJoined':
-        setRoomId(data.roomId);
-        setGameState('joining');
-        setPlayers(data.players);
-        setMessage('✨ Connecté ! En attente du démarrage...');
-        setMyPlayerId(2);
-        break;
-
-      case 'playerJoined':
-        setPlayers(data.players);
-        setMessage('🚀 Joueur 2 connecté ! Choisissez vos nombres secrets.');
-        setGameState('setup');
-        break;
-
-      case 'gameStart':
-        setMessage(`🎮 C'est parti ! Au tour du Joueur ${currentPlayer}`);
-        setGameState('playing');
-        setIsMyTurn(myPlayerId === currentPlayer);
-        break;
-
-      case 'feedback':
-        const newEntry = {
-          guess: data.guess,
-          player: data.player,
-          wellPlaced: data.feedback.wellPlaced,
-          misplaced: data.feedback.misplaced
-        };
-        setHistory(prev => [...prev, newEntry]);
-
-        if (data.feedback.wellPlaced === gameSettings.digits) {
-          setGameState('won');
-          setMessage(`🏆 Joueur ${data.player} a gagné ! Félicitations !`);
-        } else {
-          const nextPlayer = currentPlayer === 1 ? 2 : 1;
-          setCurrentPlayer(nextPlayer);
-          setIsMyTurn(myPlayerId === nextPlayer);
-          setMessage(`🎯 Au tour du Joueur ${nextPlayer}`);
-          setGuess(['', '', '', '']);
-        }
-        break;
+  // ✅ Effet séparé pour gérer roomId dans secretSet
+  useEffect(() => {
+    if (socket && imReady && opponentReady && roomId) {
+      socket.emit('checkGameStart', { roomId });
     }
-  };
+  }, [socket, imReady, opponentReady, roomId]);
+
+  // ✅ Calcul automatique de isMyTurn quand currentPlayer ou myPlayerId changent
+  useEffect(() => {
+    const newIsMyTurn = myPlayerId === currentPlayer;
+    setIsMyTurn(newIsMyTurn);
+    console.log(`Player ${myPlayerId}: currentPlayer=${currentPlayer}, isMyTurn=${newIsMyTurn}`);
+  }, [currentPlayer, myPlayerId]);
 
   const createRoom = () => {
     if (!pseudo.trim()) {
@@ -221,7 +213,17 @@ function App() {
   const copyRoomLink = () => {
     const link = `${window.location.origin}?room=${roomId}`;
     navigator.clipboard.writeText(link);
+    // ✅ Ne pas changer le message, ça empêche le changement d'état
+    // setMessage('📋 Lien copié ! Envoie-le à ton ami !');
+
+    // ✅ Afficher un message temporaire sans changer l'état
+    const originalMessage = message;
     setMessage('📋 Lien copié ! Envoie-le à ton ami !');
+    setTimeout(() => {
+      if (gameState === 'hosting') {
+        setMessage(`🎉 Salle créée ! Code: ${roomId}`);
+      }
+    }, 2000);
   };
 
   const inputFields = (value, onChange, disabled, dataPrefix = '') => (
@@ -305,7 +307,7 @@ function App() {
 
                     <button
                         onClick={createRoom}
-                        className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-2xl text-xl font-black hover:from-purple-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                        className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-2xl text-xl font-black hover:from-purple-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 shadow-lg cursor-pointer"
                     >
                       🚀 CRÉER LA PARTIE
                     </button>
@@ -338,7 +340,7 @@ function App() {
                     />
                     <button
                         onClick={joinRoom}
-                        className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white p-4 rounded-2xl text-xl font-black hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                        className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white p-4 rounded-2xl text-xl font-black hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 transform hover:scale-105 shadow-lg cursor-pointer"
                     >
                       🎯 REJOINDRE
                     </button>
@@ -356,7 +358,7 @@ function App() {
                   <p className="text-lg font-semibold text-green-600 mb-6">Code: <span className="text-3xl font-black text-green-800">{roomId}</span></p>
                   <button
                       onClick={copyRoomLink}
-                      className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-2xl font-black hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105"
+                      className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-2xl font-black hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105 cursor-pointer"
                   >
                     📋 COPIER LE LIEN
                   </button>
@@ -403,7 +405,7 @@ function App() {
                         className={`w-full p-4 rounded-2xl text-xl font-black transition-all duration-200 transform hover:scale-105 shadow-lg ${
                             imReady
                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-pink-500 to-pink-600 text-white hover:from-pink-600 hover:to-pink-700'
+                                : 'bg-gradient-to-r from-pink-500 to-pink-600 text-white hover:from-pink-600 hover:to-pink-700 cursor-pointer'
                         }`}
                     >
                       {imReady ? '✅ NOMBRE VALIDÉ' : '🔒 VALIDER'}
@@ -440,7 +442,7 @@ function App() {
                           className={`w-full p-4 rounded-2xl text-xl font-black transition-all duration-200 transform hover:scale-105 shadow-lg ${
                               !isMyTurn
                                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                  : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
+                                  : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 cursor-pointer'
                           }`}
                       >
                         {isMyTurn ? '🚀 PROPOSER' : '⏳ PAS TON TOUR'}
@@ -496,7 +498,7 @@ function App() {
                   <h2 className="text-4xl font-black text-yellow-600 mb-6">PARTIE TERMINÉE !</h2>
                   <button
                       onClick={handleReset}
-                      className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-8 py-4 rounded-2xl text-2xl font-black hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                      className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-8 py-4 rounded-2xl text-2xl font-black hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 transform hover:scale-105 shadow-lg cursor-pointer"
                   >
                     🔄 REJOUER
                   </button>
