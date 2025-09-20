@@ -13,6 +13,7 @@ const io = new Server(server, {
 });
 
 const rooms = {};
+const RECONNECTION_TIMEOUT = 30000; // 30 seconds grace period for reconnection
 
 const generateRoomId = () => {
     let result = '';
@@ -29,22 +30,20 @@ const checkGuess = (secret, guess) => {
     const secretArr = secret.split('');
     const guessArr = guess.split('');
 
-    // Check for well-placed numbers
     for (let i = 0; i < secretArr.length; i++) {
         if (secretArr[i] === guessArr[i]) {
             wellPlaced++;
-            secretArr[i] = 'x'; // Mark as used
-            guessArr[i] = 'y'; // Mark as used
+            secretArr[i] = 'x';
+            guessArr[i] = 'y';
         }
     }
 
-    // Check for misplaced numbers
     for (let i = 0; i < guessArr.length; i++) {
         if (guessArr[i] !== 'y') {
             const secretIndex = secretArr.indexOf(guessArr[i]);
             if (secretIndex > -1) {
                 misplaced++;
-                secretArr[secretIndex] = 'x'; // Mark as used
+                secretArr[secretIndex] = 'x';
             }
         }
     }
@@ -52,7 +51,6 @@ const checkGuess = (secret, guess) => {
     return { wellPlaced, misplaced };
 };
 
-// Fonction pour valider un nombre selon les règles
 const validateNumber = (number, gameSettings) => {
     if (number.length !== gameSettings.digits || !/^\d+$/.test(number)) {
         return { valid: false, error: `Entre ${gameSettings.digits} chiffres valides !` };
@@ -68,19 +66,22 @@ const validateNumber = (number, gameSettings) => {
 io.on('connection', (socket) => {
     console.log('a user connected:', socket.id);
 
-    socket.on('createRoom', ({ pseudo, gameSettings }) => {
+    socket.on('createRoom', ({ pseudo, gameSettings, sessionId }) => {
         const roomId = generateRoomId();
         rooms[roomId] = {
-            players: [{ id: socket.id, pseudo, secret: null }],
+            players: [{ id: socket.id, pseudo, secret: null, sessionId, connected: true }],
             secrets: {},
-            gameSettings: gameSettings
+            gameSettings,
+            history: [],
+            currentPlayer: null,
+            gameState: 'hosting'
         };
         socket.join(roomId);
         socket.emit('roomCreated', { roomId, gameSettings });
         console.log(`Room ${roomId} created by ${pseudo}`);
     });
 
-    socket.on('joinRoom', ({ pseudo, roomId }) => {
+    socket.on('joinRoom', ({ pseudo, roomId, sessionId }) => {
         const room = rooms[roomId];
         if (!room) {
             socket.emit('error', 'Cette salle n\'existe pas.');
@@ -92,7 +93,8 @@ io.on('connection', (socket) => {
             return;
         }
 
-        room.players.push({ id: socket.id, pseudo, secret: null });
+        room.players.push({ id: socket.id, pseudo, secret: null, sessionId, connected: true });
+        room.gameState = 'setup';
         socket.join(roomId);
 
         const playersData = {
@@ -100,87 +102,146 @@ io.on('connection', (socket) => {
             player2: room.players[1].pseudo
         };
 
-        // Envoyer les paramètres de jeu aux deux joueurs
         socket.emit('roomJoined', { roomId, players: playersData, gameSettings: room.gameSettings });
         io.to(room.players[0].id).emit('playerJoined', { players: playersData, gameSettings: room.gameSettings });
         console.log(`${pseudo} joined room ${roomId}`);
     });
 
-    socket.on('setSecret', ({ secret, player }) => {
-        const roomId = Object.keys(rooms).find(key => rooms[key].players.some(p => p.id === socket.id));
+    socket.on('reconnect', ({ sessionId }) => {
+        const roomId = Object.keys(rooms).find(key =>
+            rooms[key].players.some(p => p.sessionId === sessionId)
+        );
+        const room = rooms[roomId];
+        if (!room) {
+            socket.emit('error', 'Aucune salle trouvée pour cette session.');
+            return;
+        }
+
+        const player = room.players.find(p => p.sessionId === sessionId);
+        if (!player) {
+            socket.emit('error', 'Joueur non trouvé.');
+            return;
+        }
+
+        player.id = socket.id;
+        player.connected = true;
+        socket.join(roomId);
+
+        socket.emit('reconnected', {
+            gameState: {
+                state: room.gameState,
+                roomId,
+                players: {
+                    player1: room.players[0].pseudo,
+                    player2: room.players[1]?.pseudo || ''
+                },
+                myPlayerId: room.players.findIndex(p => p.sessionId === sessionId) + 1,
+                currentPlayer: room.currentPlayer,
+                isMyTurn: room.currentPlayer === (room.players.findIndex(p => p.sessionId === sessionId) + 1),
+                gameSettings: room.gameSettings,
+                history: room.history,
+                playerSecret: player.secret || Array(room.gameSettings.digits).fill('')
+            }
+        });
+
+        const otherPlayer = room.players.find(p => p.sessionId !== sessionId);
+        if (otherPlayer && otherPlayer.connected) {
+            io.to(otherPlayer.id).emit('playerReconnected', { pseudo: player.pseudo });
+        }
+
+        console.log(`Player ${player.pseudo} reconnected to room ${roomId}`);
+    });
+
+    socket.on('setSecret', ({ secret, player, sessionId }) => {
+        const roomId = Object.keys(rooms).find(key => rooms[key].players.some(p => p.sessionId === sessionId));
         const room = rooms[roomId];
         if (!room) return;
 
-        // Valider le secret selon les règles du jeu
         const validation = validateNumber(secret, room.gameSettings);
         if (!validation.valid) {
             socket.emit('error', validation.error);
             return;
         }
 
-        const playerIndex = room.players.findIndex(p => p.id === socket.id);
+        const playerIndex = room.players.findIndex(p => p.sessionId === sessionId);
         room.players[playerIndex].secret = secret;
         room.secrets[socket.id] = secret;
 
         io.to(roomId).emit('secretSet', { player });
 
-        if (room.players.length === 2 && room.players.every(p => p.secret !== undefined && p.secret !== null)) {
-            const startingPlayer = Math.random() < 0.5 ? 1 : 2;
-            room.currentPlayer = startingPlayer;
-            io.to(roomId).emit('gameStart', { currentPlayer: startingPlayer, gameSettings: room.gameSettings });
-            console.log(`Game started in room ${roomId}. Player ${startingPlayer} starts.`);
+        if (room.players.length === 2 && room.players.every(p => p.secret !== null && p.secret !== undefined)) {
+            room.gameState = 'playing';
+            room.currentPlayer = Math.random() < 0.5 ? 1 : 2;
+            io.to(roomId).emit('gameStart', { currentPlayer: room.currentPlayer, gameSettings: room.gameSettings });
+            console.log(`Game started in room ${roomId}. Player ${room.currentPlayer} starts.`);
         }
     });
 
-    socket.on('submitGuess', ({ guess, player }) => {
-        const roomId = Object.keys(rooms).find(key => rooms[key].players.some(p => p.id === socket.id));
+    socket.on('submitGuess', ({ guess, player, sessionId }) => {
+        const roomId = Object.keys(rooms).find(key => rooms[key].players.some(p => p.sessionId === sessionId));
         const room = rooms[roomId];
         if (!room) return;
 
-        const guesser = room.players.find(p => p.id === socket.id);
-        const playerIndex = room.players.findIndex(p => p.id === guesser.id) + 1;
+        const guesser = room.players.find(p => p.sessionId === sessionId);
+        const playerIndex = room.players.findIndex(p => p.sessionId === sessionId) + 1;
         if (playerIndex !== room.currentPlayer) {
             socket.emit('error', 'Ce n\'est pas votre tour de jouer.');
             return;
         }
 
-        // Valider la proposition selon les règles du jeu
         const validation = validateNumber(guess, room.gameSettings);
         if (!validation.valid) {
             socket.emit('error', validation.error);
             return;
         }
 
-        const opponentId = room.players.find(p => p.id !== socket.id).id;
-        const opponentSecret = room.secrets[opponentId];
+        const opponent = room.players.find(p => p.sessionId !== sessionId);
+        const opponentSecret = room.secrets[opponent.id];
         const feedback = checkGuess(opponentSecret, guess);
 
-        io.to(roomId).emit('feedback', {
+        const newEntry = {
             guess,
             player,
-            feedback
-        });
+            feedback,
+            timestamp: Date.now()
+        };
+        room.history.push(newEntry);
 
-        if (feedback.wellPlaced !== room.gameSettings.digits) {
+        io.to(roomId).emit('feedback', newEntry);
+
+        if (feedback.wellPlaced === room.gameSettings.digits) {
+            room.gameState = 'won';
+            io.to(roomId).emit('gameWon', { winner: player });
+        } else {
             room.currentPlayer = room.currentPlayer === 1 ? 2 : 1;
         }
     });
 
     socket.on('disconnect', () => {
         const roomId = Object.keys(rooms).find(key => rooms[key].players.some(p => p.id === socket.id));
-        if (roomId && rooms[roomId]) {
-            const playerIndex = rooms[roomId].players.findIndex(p => p.id === socket.id);
-            if (playerIndex !== -1) {
-                rooms[roomId].players.splice(playerIndex, 1);
+        if (!roomId || !rooms[roomId]) return;
+
+        const player = rooms[roomId].players.find(p => p.id === socket.id);
+        if (player) {
+            player.connected = false;
+            console.log(`Player ${player.pseudo} disconnected from room ${roomId}`);
+
+            const otherPlayer = rooms[roomId].players.find(p => p.id !== socket.id && p.connected);
+            if (otherPlayer) {
+                io.to(otherPlayer.id).emit('playerDisconnected', { pseudo: player.pseudo });
             }
-            if (rooms[roomId].players.length === 0) {
-                delete rooms[roomId];
-                console.log(`Room ${roomId} has been deleted.`);
-            } else {
-                io.to(roomId).emit('error', 'Votre adversaire s\'est déconnecté. La partie est terminée.');
-                delete rooms[roomId];
-                console.log(`Room ${roomId} has been ended due to player disconnection.`);
-            }
+
+            setTimeout(() => {
+                if (!rooms[roomId] || rooms[roomId].players.every(p => !p.connected)) {
+                    delete rooms[roomId];
+                    console.log(`Room ${roomId} deleted due to no connected players.`);
+                } else if (!player.connected) {
+                    rooms[roomId].players = rooms[roomId].players.filter(p => p.connected);
+                    io.to(roomId).emit('error', `${player.pseudo} n'a pas pu se reconnecter. La partie est terminée.`);
+                    delete rooms[roomId];
+                    console.log(`Room ${roomId} ended due to prolonged disconnection.`);
+                }
+            }, RECONNECTION_TIMEOUT);
         }
     });
 });
