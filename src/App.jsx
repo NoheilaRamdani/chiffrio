@@ -3,36 +3,29 @@ import { io } from 'socket.io-client';
 
 const socket = io('http://localhost:3001');
 
-// Composant pour les formes décoratives subtiles en arrière-plan
 const BackgroundShapes = () => {
     return (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
             <svg className="absolute top-20 left-1/4 w-32 h-32 opacity-15" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1"
-                        className="text-indigo-400"/>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1" className="text-indigo-400"/>
             </svg>
             <svg className="absolute bottom-40 right-1/3 w-24 h-24 opacity-15" viewBox="0 0 100 100">
-                <polygon points="50,10 90,90 10,90" fill="none" stroke="currentColor" strokeWidth="1"
-                         className="text-pink-400"/>
+                <polygon points="50,10 90,90 10,90" fill="none" stroke="currentColor" strokeWidth="1" className="text-pink-400"/>
             </svg>
             <svg className="absolute top-1/3 right-1/4 w-28 h-28 opacity-15" viewBox="0 0 100 100">
-                <rect x="20" y="20" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="1"
-                      className="text-purple-400"/>
+                <rect x="20" y="20" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="1" className="text-purple-400"/>
             </svg>
             <svg className="absolute top-1/2 left-1/6 w-20 h-20 opacity-15" viewBox="0 0 100 100">
-                <polygon points="50,15 85,75 15,75" fill="none" stroke="currentColor" strokeWidth="1"
-                         className="text-green-400"/>
+                <polygon points="50,15 85,75 15,75" fill="none" stroke="currentColor" strokeWidth="1" className="text-green-400"/>
             </svg>
             <svg className="absolute bottom-1/4 left-1/2 w-36 h-36 opacity-1" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="1"
-                        className="text-yellow-400"/>
+                <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="1" className="text-yellow-400"/>
             </svg>
         </div>
     );
 };
 
 function App() {
-    // États du jeu
     const [gameState, setGameState] = useState('lobby');
     const [pseudo, setPseudo] = useState('');
     const [roomId, setRoomId] = useState('');
@@ -47,13 +40,14 @@ function App() {
     const [gameSettings, setGameSettings] = useState({
         digits: 4,
         allowDuplicates: true,
-        showMisplaced: true
+        showMisplaced: true,
+        showWellPlacedDigits: true
     });
     const [imReady, setImReady] = useState(false);
     const [notepadEntries, setNotepadEntries] = useState([]);
     const [currentNotepadEntry, setCurrentNotepadEntry] = useState(['', '', '', '']);
-    const [historyViewMode, setHistoryViewMode] = useState('grid'); // 'grid' ou 'list'
-    const [historySortMode, setHistorySortMode] = useState('recent'); // 'recent', 'closest', 'wellPlaced'
+    const [historyViewMode, setHistoryViewMode] = useState('grid');
+    const [historySortMode, setHistorySortMode] = useState('recent');
     const [reconnecting, setReconnecting] = useState(false);
     const [sessionId, setSessionId] = useState(null);
 
@@ -61,7 +55,6 @@ function App() {
     const guessInputs = useRef([]);
     const notepadInputs = useRef([]);
 
-    // Générer un ID de session unique au chargement
     useEffect(() => {
         const stored = localStorage.getItem('chiffrio-session');
         if (stored) {
@@ -73,7 +66,6 @@ function App() {
         }
     }, []);
 
-    // Vérifier l'URL pour un roomId au chargement
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const roomFromUrl = urlParams.get('room');
@@ -104,7 +96,6 @@ function App() {
             console.log('Reconnecté avec succès');
             setReconnecting(false);
             if (data.gameState) {
-                // Restaurer l'état du jeu
                 setGameState(data.gameState.state);
                 setRoomId(data.gameState.roomId);
                 setPlayers(data.gameState.players);
@@ -178,12 +169,13 @@ function App() {
                 player: data.player,
                 wellPlaced: data.feedback.wellPlaced,
                 misplaced: data.feedback.misplaced,
+                wellPlacedDigits: data.feedback.wellPlacedDigits,
                 timestamp: Date.now()
             };
 
             setHistory(prevHistory => {
                 const newHistory = [...prevHistory, newEntry];
-                return newHistory.slice(-100); // Limiter à 100 entrées
+                return newHistory.slice(-100);
             });
 
             if (data.feedback.wellPlaced === gameSettings.digits) {
@@ -197,6 +189,25 @@ function App() {
             }
         });
 
+        socket.on('gameRestarted', () => {
+            setGameState('setup');
+            setPlayerSecret(Array(gameSettings.digits).fill(''));
+            setGuess(Array(gameSettings.digits).fill(''));
+            setHistory([]);
+            setCurrentNotepadEntry(Array(gameSettings.digits).fill(''));
+            setNotepadEntries([]);
+            setImReady(false);
+            setMessage('La partie a été relancée ! Choisis ton nouveau nombre secret.');
+        });
+
+        socket.on('settingsUpdated', (newSettings) => {
+            setGameSettings(newSettings);
+            setPlayerSecret(Array(newSettings.digits).fill(''));
+            setGuess(Array(newSettings.digits).fill(''));
+            setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
+            setMessage('Les règles ont été mises à jour par l\'hôte.');
+        });
+
         return () => {
             socket.off('connect');
             socket.off('disconnect');
@@ -207,6 +218,8 @@ function App() {
             socket.off('playerJoined');
             socket.off('gameStart');
             socket.off('feedback');
+            socket.off('gameRestarted');
+            socket.off('settingsUpdated');
         };
     }, [myPlayerId, pseudo, players, gameSettings.digits, sessionId]);
 
@@ -224,6 +237,14 @@ function App() {
             return;
         }
         socket.emit('joinRoom', { pseudo: pseudo.trim(), roomId: roomId.trim(), sessionId });
+    };
+
+    const updateGameSettings = () => {
+        socket.emit('updateSettings', { roomId, gameSettings, sessionId });
+    };
+
+    const handleRestart = () => {
+        socket.emit('restartGame', { roomId, sessionId });
     };
 
     const handleSecretInputChange = (e, index) => {
@@ -334,12 +355,6 @@ function App() {
         setMessage('En attente de la réponse...');
     };
 
-    const handleReset = () => {
-        socket.disconnect();
-        localStorage.removeItem('chiffrio-session');
-        window.location.reload();
-    };
-
     const copyRoomLink = () => {
         const link = `${window.location.origin}?room=${roomId}`;
         navigator.clipboard.writeText(link);
@@ -385,17 +400,16 @@ function App() {
         return myPlayerId === 1 ? players.player2 : players.player1;
     };
 
-    // Fonction pour trier l'historique
     const getSortedHistory = (entries, sortMode) => {
         const sorted = [...entries];
         switch (sortMode) {
             case 'recent':
-                return sorted.reverse(); // Plus récent en premier
+                return sorted.reverse();
             case 'closest':
                 return sorted.sort((a, b) => {
                     const scoreA = a.wellPlaced + (a.misplaced * 0.5);
                     const scoreB = b.wellPlaced + (b.misplaced * 0.5);
-                    return scoreB - scoreA; // Meilleur score en premier
+                    return scoreB - scoreA;
                 });
             case 'wellPlaced':
                 return sorted.sort((a, b) => b.wellPlaced - a.wellPlaced);
@@ -404,7 +418,6 @@ function App() {
         }
     };
 
-    // Rendu de l'historique en grille
     const renderHistoryGrid = (entries) => {
         return (
             <div className="grid grid-cols-6 gap-2">
@@ -414,7 +427,11 @@ function App() {
                         className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-2 text-center border border-pink-200 hover:shadow-md transition-shadow"
                     >
                         <div className="font-mono text-sm font-bold text-indigo-800 mb-1">
-                            {entry.guess}
+                            {entry.guess.split('').map((digit, i) => (
+                                <span key={i} className={entry.wellPlacedDigits.includes(i) ? 'text-green-600' : ''}>
+                                    {digit}
+                                </span>
+                            ))}
                         </div>
                         <div className="flex justify-center gap-1 text-xs">
                             <span className="bg-green-200 text-green-800 px-1 py-0.5 rounded font-bold">
@@ -432,7 +449,6 @@ function App() {
         );
     };
 
-    // Rendu de l'historique en liste
     const renderHistoryList = (entries) => {
         return (
             <div className="space-y-2">
@@ -443,7 +459,11 @@ function App() {
                     >
                         <div className="flex justify-between items-center">
                             <span className="font-mono text-lg font-bold text-indigo-800 bg-white px-2 py-1 rounded-lg">
-                                {entry.guess}
+                                {entry.guess.split('').map((digit, i) => (
+                                    <span key={i} className={entry.wellPlacedDigits.includes(i) ? 'text-green-600' : ''}>
+                                        {digit}
+                                    </span>
+                                ))}
                             </span>
                             <div className="flex gap-2">
                                 <span className="bg-green-200 text-green-800 px-2 py-1 rounded-lg text-sm font-bold">
@@ -462,18 +482,83 @@ function App() {
         );
     };
 
+    const renderGameSettings = () => (
+        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-200 mt-6">
+            <h3 className="font-bold text-indigo-800 mb-4 text-lg flex items-center gap-2">
+                ⚙️ <span>Règles du jeu</span>
+            </h3>
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <span className="text-purple-700 font-medium">Nombre de chiffres</span>
+                    <select
+                        value={gameSettings.digits}
+                        onChange={(e) => {
+                            const digits = parseInt(e.target.value);
+                            setGameSettings(prev => ({ ...prev, digits }));
+                            setPlayerSecret(Array(digits).fill(''));
+                            setGuess(Array(digits).fill(''));
+                            setCurrentNotepadEntry(Array(digits).fill(''));
+                        }}
+                        className="bg-white border border-purple-300 rounded-lg px-3 py-2 text-sm font-semibold"
+                        disabled={myPlayerId !== 1}
+                    >
+                        <option value={3}>3 chiffres</option>
+                        <option value={4}>4 chiffres</option>
+                        <option value={5}>5 chiffres</option>
+                    </select>
+                </div>
+                <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
+                    <span className="text-purple-700 font-medium">Chiffres en double autorisés</span>
+                    <input
+                        type="checkbox"
+                        checked={gameSettings.allowDuplicates}
+                        onChange={(e) => setGameSettings(prev => ({ ...prev, allowDuplicates: e.target.checked }))}
+                        className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                        disabled={myPlayerId !== 1}
+                    />
+                </label>
+                <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
+                    <span className="text-purple-700 font-medium">Afficher les mal placés</span>
+                    <input
+                        type="checkbox"
+                        checked={gameSettings.showMisplaced}
+                        onChange={(e) => setGameSettings(prev => ({ ...prev, showMisplaced: e.target.checked }))}
+                        className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                        disabled={myPlayerId !== 1}
+                    />
+                </label>
+                <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
+                    <span className="text-purple-700 font-medium">Afficher les chiffres bien placés</span>
+                    <input
+                        type="checkbox"
+                        checked={gameSettings.showWellPlacedDigits}
+                        onChange={(e) => setGameSettings(prev => ({ ...prev, showWellPlacedDigits: e.target.checked }))}
+                        className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                        disabled={myPlayerId !== 1}
+                    />
+                </label>
+                {myPlayerId === 1 && (
+                    <button
+                        onClick={updateGameSettings}
+                        className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white p-3 rounded-xl text-lg font-bold hover:from-pink-600 hover:to-pink-700 transition-all duration-300 shadow-lg"
+                    >
+                        Mettre à jour les règles
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-100 font-sans">
             <BackgroundShapes />
 
-            {/* Indicateur de reconnexion */}
             {reconnecting && (
                 <div className="fixed top-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
                     Reconnexion en cours...
                 </div>
             )}
 
-            {/* Header */}
             <header className="bg-white/80 backdrop-blur-md shadow-lg border-b border-purple-200 p-4 top-0 z-10 relative">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -496,15 +581,20 @@ function App() {
                             <div className="text-right bg-purple-50 px-3 py-2 rounded-lg border border-purple-200">
                                 <div className="text-xs text-purple-500 font-medium">Ton secret</div>
                                 <div className="text-lg font-mono font-bold text-indigo-800">
-                                    {playerSecret.join('') || '----'}
+                                    {playerSecret.join('') || Array(gameSettings.digits).fill('-').join('')}
                                 </div>
                             </div>
+                            <button
+                                onClick={handleRestart}
+                                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-lg"
+                            >
+                                🔄 Relancer
+                            </button>
                         </div>
                     )}
                 </div>
             </header>
 
-            {/* Barre de message */}
             <div className="bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-500 text-white p-4 relative z-10">
                 <div className="max-w-7xl mx-auto text-center">
                     <p className="font-semibold text-lg">{message}</p>
@@ -513,8 +603,7 @@ function App() {
 
             <div className="max-w-7xl mx-auto p-6 relative z-10">
                 {gameState === 'lobby' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-                        {/* Créer une partie */}
+                    <div className="grid grid-cols-2 gap-8 mt-8">
                         <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
                             <div className="text-center mb-8">
                                 <div className="w-20 h-20 bg-gradient-to-br from-pink-400 to-pink-600 rounded-2xl flex items-center justify-center text-3xl text-white mx-auto mb-6 shadow-lg">
@@ -531,49 +620,7 @@ function App() {
                                     placeholder="Ton pseudo..."
                                     className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-400 text-lg font-medium transition-all"
                                 />
-                                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-200">
-                                    <h3 className="font-bold text-indigo-800 mb-4 text-lg flex items-center gap-2">
-                                        ⚙️ <span>Règles du jeu</span>
-                                    </h3>
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-purple-700 font-medium">Nombre de chiffres</span>
-                                            <select
-                                                value={gameSettings.digits}
-                                                onChange={(e) => {
-                                                    const digits = parseInt(e.target.value);
-                                                    setGameSettings(prev => ({ ...prev, digits }));
-                                                    setPlayerSecret(Array(digits).fill(''));
-                                                    setGuess(Array(digits).fill(''));
-                                                    setCurrentNotepadEntry(Array(digits).fill(''));
-                                                }}
-                                                className="bg-white border border-purple-300 rounded-lg px-3 py-2 text-sm font-semibold"
-                                            >
-                                                <option value={3}>3 chiffres</option>
-                                                <option value={4}>4 chiffres</option>
-                                                <option value={5}>5 chiffres</option>
-                                            </select>
-                                        </div>
-                                        <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                                            <span className="text-purple-700 font-medium">Chiffres en double autorisés</span>
-                                            <input
-                                                type="checkbox"
-                                                checked={gameSettings.allowDuplicates}
-                                                onChange={(e) => setGameSettings(prev => ({ ...prev, allowDuplicates: e.target.checked }))}
-                                                className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
-                                            />
-                                        </label>
-                                        <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                                            <span className="text-purple-700 font-medium">Afficher les mal placés</span>
-                                            <input
-                                                type="checkbox"
-                                                checked={gameSettings.showMisplaced}
-                                                onChange={(e) => setGameSettings(prev => ({ ...prev, showMisplaced: e.target.checked }))}
-                                                className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
-                                            />
-                                        </label>
-                                    </div>
-                                </div>
+                                {renderGameSettings()}
                                 <button
                                     onClick={createRoom}
                                     className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 rounded-xl text-xl font-bold hover:from-pink-600 hover:to-pink-700 transition-all duration-300 shadow-lg"
@@ -583,7 +630,6 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Rejoindre une partie */}
                         <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
                             <div className="text-center mb-8">
                                 <div className="w-20 h-20 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-2xl flex items-center justify-center text-3xl text-white mx-auto mb-6 shadow-lg">
@@ -628,9 +674,10 @@ function App() {
                                 <p className="text-sm text-purple-700 mb-2 font-semibold">Code de la salle</p>
                                 <p className="text-4xl font-bold text-indigo-800 tracking-wider font-mono">{roomId}</p>
                             </div>
+                            {myPlayerId === 1 && renderGameSettings()}
                             <button
                                 onClick={copyRoomLink}
-                                className="bg-gradient-to-r from-pink-500 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 shadow-lg"
+                                className="bg-gradient-to-r from-pink-500 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 shadow-lg mt-6"
                             >
                                 📋 Copier le lien
                             </button>
@@ -646,7 +693,6 @@ function App() {
                                 {getOpponentName() ? `${getOpponentName()} attend ta décision...` : 'En attente de l\'autre joueur...'}
                             </p>
 
-                            {/* Affichage des règles du jeu */}
                             <div className="bg-gradient-to-r from-pink-50 to-indigo-50 rounded-2xl p-4 mb-8 border border-pink-100">
                                 <div className="flex flex-wrap justify-center gap-4 text-sm">
                                     <span className="bg-white px-3 py-1 rounded-full border border-pink-200 text-pink-700 font-semibold">
@@ -666,8 +712,17 @@ function App() {
                                     }`}>
                                         {gameSettings.showMisplaced ? '✓' : '✗'} Mal placés
                                     </span>
+                                    <span className={`px-3 py-1 rounded-full border font-semibold ${
+                                        gameSettings.showWellPlacedDigits
+                                            ? 'bg-green-100 border-green-200 text-green-700'
+                                            : 'bg-red-100 border-red-200 text-red-700'
+                                    }`}>
+                                        {gameSettings.showWellPlacedDigits ? '✓' : '✗'} Chiffres bien placés
+                                    </span>
                                 </div>
                             </div>
+
+                            {myPlayerId === 1 && renderGameSettings()}
 
                             <div className="mb-10">
                                 {inputFields(playerSecret, handleSecretInputChange, false, secretInputs)}
@@ -694,7 +749,6 @@ function App() {
 
                 {gameState === 'playing' && (
                     <div className="grid grid-cols-5 gap-6 mt-6">
-                        {/* Bloc-notes (côté gauche) */}
                         <div className="col-span-1 bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-indigo-200">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-bold text-lg text-indigo-800 flex items-center gap-2">
@@ -708,7 +762,6 @@ function App() {
                                 </button>
                             </div>
 
-                            {/* Nouvelle entrée */}
                             <div className="bg-indigo-50 rounded-lg p-3 mb-4 border border-indigo-200">
                                 <div className="mb-2">
                                     {inputFields(currentNotepadEntry, handleNotepadInputChange, false, notepadInputs, 'small')}
@@ -730,7 +783,6 @@ function App() {
                                 </div>
                             </div>
 
-                            {/* Liste des entrées */}
                             <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
                                 {notepadEntries.length === 0 ? (
                                     <p className="text-sm text-indigo-500 italic text-center py-4">
@@ -763,14 +815,12 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Section principale de jeu (milieu) */}
                         <div className="col-span-2 bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-purple-200">
                             <div className="text-center mb-8">
                                 <h2 className="text-2xl font-bold text-indigo-800 mb-4">
                                     {isMyTurn ? `🎯 À ton tour !` : `⏳ Tour de ${getOpponentName()}`}
                                 </h2>
 
-                                {/* Indicateur des joueurs */}
                                 <div className="flex justify-center items-center gap-6 mb-6">
                                     <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
                                         currentPlayer === 1
@@ -817,14 +867,12 @@ function App() {
                             </button>
                         </div>
 
-                        {/* Mon historique complet (côté droit) */}
                         <div className="col-span-2 bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-pink-200">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-xl font-bold text-pink-800 flex items-center gap-2">
                                     📊 <span>Mon historique</span>
                                 </h3>
                                 <div className="flex gap-2">
-                                    {/* Boutons de vue */}
                                     <button
                                         onClick={() => setHistoryViewMode(historyViewMode === 'grid' ? 'list' : 'grid')}
                                         className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
@@ -835,7 +883,6 @@ function App() {
                                     >
                                         {historyViewMode === 'grid' ? '📋' : '⚏'}
                                     </button>
-                                    {/* Menu de tri */}
                                     <select
                                         value={historySortMode}
                                         onChange={(e) => setHistorySortMode(e.target.value)}
@@ -864,33 +911,6 @@ function App() {
                                 )}
                             </div>
 
-                            {/* Statistiques rapides */}
-                            {history.filter(h => h.player === myPlayerId).length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-pink-200">
-                                    <div className="grid grid-cols-3 gap-2 text-center">
-                                        <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-2">
-                                            <div className="text-lg font-bold text-pink-800">
-                                                {history.filter(h => h.player === myPlayerId).length}
-                                            </div>
-                                            <div className="text-xs text-pink-600">Essais</div>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-2">
-                                            <div className="text-lg font-bold text-green-800">
-                                                {Math.max(...history.filter(h => h.player === myPlayerId).map(h => h.wellPlaced), 0)}
-                                            </div>
-                                            <div className="text-xs text-green-600">Meilleur</div>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-2">
-                                            <div className="text-lg font-bold text-purple-800">
-                                                {Math.round(history.filter(h => h.player === myPlayerId).reduce((acc, h) => acc + h.wellPlaced, 0) / history.filter(h => h.player === myPlayerId).length * 10) / 10}
-                                            </div>
-                                            <div className="text-xs text-purple-600">Moy.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Historique de l'adversaire - compact */}
                             <div className="mt-6 pt-4 border-t border-gray-200">
                                 <h4 className="font-bold text-green-800 mb-3 text-center flex items-center justify-center gap-2">
                                     <span className="text-sm">👁️ {getOpponentName() || 'Adversaire'}</span>
@@ -900,7 +920,11 @@ function App() {
                                         {history.filter(h => h.player !== myPlayerId).slice(-16).map((entry, index) => (
                                             <div key={index} className="bg-gradient-to-r from-green-50 to-lime-50 rounded-lg p-1 text-center border border-green-200">
                                                 <div className="font-mono text-xs font-bold text-green-800">
-                                                    {entry.guess}
+                                                    {entry.guess.split('').map((digit, i) => (
+                                                        <span key={i} className={entry.wellPlacedDigits.includes(i) ? 'text-green-600' : ''}>
+                                                            {digit}
+                                                        </span>
+                                                    ))}
                                                 </div>
                                                 <div className="flex justify-center gap-1 text-xs">
                                                     <span className="bg-green-300 text-green-800 px-1 rounded text-xs font-bold">
@@ -931,12 +955,20 @@ function App() {
                             <div className="bg-gradient-to-r from-pink-50 to-indigo-50 rounded-2xl p-6 mb-8 border border-pink-200">
                                 <p className="text-purple-700 text-lg">Félicitations pour cette belle partie ! 🎉</p>
                             </div>
-                            <button
-                                onClick={handleReset}
-                                className="bg-gradient-to-r from-pink-500 to-indigo-500 text-white px-12 py-4 rounded-2xl text-2xl font-bold hover:from-pink-600 hover:to-indigo-600 transition-all duration-300 shadow-lg"
-                            >
-                                🔄 Nouvelle partie
-                            </button>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={handleRestart}
+                                    className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-8 py-4 rounded-xl text-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-lg"
+                                >
+                                    🔄 Relancer
+                                </button>
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="flex-1 bg-gradient-to-r from-pink-500 to-indigo-500 text-white px-8 py-4 rounded-xl text-xl font-bold hover:from-pink-600 hover:to-indigo-600 transition-all duration-300 shadow-lg"
+                                >
+                                    🔙 Retour au lobby
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

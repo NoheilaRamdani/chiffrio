@@ -13,7 +13,7 @@ const io = new Server(server, {
 });
 
 const rooms = {};
-const RECONNECTION_TIMEOUT = 30000; // 30 seconds grace period for reconnection
+const RECONNECTION_TIMEOUT = 30000;
 
 const generateRoomId = () => {
     let result = '';
@@ -27,12 +27,14 @@ const generateRoomId = () => {
 const checkGuess = (secret, guess) => {
     let wellPlaced = 0;
     let misplaced = 0;
+    const wellPlacedDigits = [];
     const secretArr = secret.split('');
     const guessArr = guess.split('');
 
     for (let i = 0; i < secretArr.length; i++) {
         if (secretArr[i] === guessArr[i]) {
             wellPlaced++;
+            wellPlacedDigits.push(i);
             secretArr[i] = 'x';
             guessArr[i] = 'y';
         }
@@ -48,7 +50,7 @@ const checkGuess = (secret, guess) => {
         }
     }
 
-    return { wellPlaced, misplaced };
+    return { wellPlaced, misplaced, wellPlacedDigits };
 };
 
 const validateNumber = (number, gameSettings) => {
@@ -215,6 +217,51 @@ io.on('connection', (socket) => {
         } else {
             room.currentPlayer = room.currentPlayer === 1 ? 2 : 1;
         }
+    });
+
+    socket.on('updateSettings', ({ roomId, gameSettings, sessionId }) => {
+        const room = rooms[roomId];
+        if (!room) {
+            socket.emit('error', 'Salle non trouvée.');
+            return;
+        }
+
+        const playerIndex = room.players.findIndex(p => p.sessionId === sessionId);
+        if (playerIndex !== 0) { // Only host (player 1) can update settings
+            socket.emit('error', 'Seul l\'hôte peut modifier les règles.');
+            return;
+        }
+
+        room.gameSettings = gameSettings;
+        room.players.forEach(player => {
+            player.secret = null;
+            room.secrets[player.id] = null;
+        });
+        room.history = [];
+        room.gameState = 'setup';
+        room.currentPlayer = null;
+
+        io.to(roomId).emit('settingsUpdated', gameSettings);
+        console.log(`Settings updated in room ${roomId}`);
+    });
+
+    socket.on('restartGame', ({ roomId, sessionId }) => {
+        const room = rooms[roomId];
+        if (!room) {
+            socket.emit('error', 'Salle non trouvée.');
+            return;
+        }
+
+        room.gameState = 'setup';
+        room.history = [];
+        room.currentPlayer = null;
+        room.players.forEach(player => {
+            player.secret = null;
+            room.secrets[player.id] = null;
+        });
+
+        io.to(roomId).emit('gameRestarted');
+        console.log(`Room ${roomId} restarted.`);
     });
 
     socket.on('disconnect', () => {
