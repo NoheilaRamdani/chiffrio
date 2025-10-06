@@ -5,13 +5,30 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
-// En production, remplace '*' par l'URL de ton frontend (ex: https://ton-frontend.onrender.com)
+// Port dynamique pour Render
+const PORT = process.env.PORT || 3001;
+
+// CORS : En prod, utilise l'URL du frontend Render
+const corsOrigin = process.env.NODE_ENV === 'production'
+    ? process.env.FRONTEND_URL || 'https://chiffrio-frontend.onrender.com'
+    : 'http://localhost:5173';  // Port Vite dev
+
 const io = new Server(server, {
     cors: {
-        origin: '*',
+        origin: corsOrigin,
         methods: ['GET', 'POST']
-    }
+    },
+    pingTimeout: 60000,  // Évite les déconnexions après 5 min sur Render free
+    pingInterval: 25000
 });
+
+// Serve static frontend in production (optionnel, mais utile)
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static('../frontend/dist'));
+    app.get('*', (req, res) => {
+        res.sendFile('index.html', { root: '../frontend/dist' });
+    });
+}
 
 const rooms = {};
 const RECONNECTION_TIMEOUT = 30000;
@@ -121,8 +138,6 @@ io.on('connection', (socket) => {
         io.to(room.players[0].id).emit('playerJoined', { players: playersData, gameSettings: room.gameSettings });
         console.log(`${pseudo} joined room ${roomId}`);
     });
-
-    // ... (le reste du server.js reste identique à la version précédente)
 
     socket.on('reconnect', ({ sessionId }) => {
         const roomId = Object.keys(rooms).find(key =>
@@ -308,7 +323,6 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
 });
