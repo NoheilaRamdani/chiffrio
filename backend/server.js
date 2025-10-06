@@ -1,34 +1,39 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
 
-// Port dynamique pour Render
-const PORT = process.env.PORT || 3001;
-
-// CORS : En prod, utilise l'URL du frontend Render
-const corsOrigin = process.env.NODE_ENV === 'production'
-    ? process.env.FRONTEND_URL || 'https://chiffrio-frontend.onrender.com'
-    : 'http://localhost:5173';  // Port Vite dev
+// Middleware CORS pour Express
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production'
+        ? process.env.FRONTEND_URL || 'https://chiffrio-frontend.onrender.com'
+        : 'http://localhost:5173',
+    methods: ['GET', 'POST']
+}));
 
 const io = new Server(server, {
     cors: {
-        origin: corsOrigin,
+        origin: process.env.NODE_ENV === 'production'
+            ? process.env.FRONTEND_URL || 'https://chiffrio-frontend.onrender.com'
+            : 'http://localhost:5173',
         methods: ['GET', 'POST']
     },
-    pingTimeout: 60000,  // Évite les déconnexions après 5 min sur Render free
+    pingTimeout: 60000,
     pingInterval: 25000
 });
 
-// Serve static frontend in production (optionnel, mais utile)
+// Supprimez cette partie, car le frontend est servi séparément
+/*
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static('../frontend/dist'));
     app.get('*', (req, res) => {
         res.sendFile('index.html', { root: '../frontend/dist' });
     });
 }
+*/
 
 const rooms = {};
 const RECONNECTION_TIMEOUT = 30000;
@@ -323,6 +328,6 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
+server.listen(process.env.PORT || 3001, '0.0.0.0', () => {
+    console.log(`Server is running on port ${process.env.PORT || 3001}`);
 });
