@@ -10,6 +10,7 @@ const server = http.createServer(app);
 app.use(cors({
     origin: [
         'https://chiffrio-frontend.onrender.com',
+        'https://chiffrio.onrender.com',  // Ajoute l'URL réelle du frontend
         'http://localhost:5173'
     ],
     methods: ['GET', 'POST'],
@@ -18,19 +19,18 @@ app.use(cors({
 
 
 
+
 const io = new Server(server, {
     cors: {
         origin: [
             'https://chiffrio-frontend.onrender.com',
+            'https://chiffrio.onrender.com',  // Ajoute l'URL réelle du frontend
             'http://localhost:5173'
         ],
         methods: ['GET', 'POST'],
         credentials: true
-    },
-    transports: ['websocket', 'polling'], // Ajoutez ceci
-    allowEIO3: true // Ajoutez ceci pour la compatibilité
+    }
 });
-
 
 const rooms = {};
 const RECONNECTION_TIMEOUT = 30000;
