@@ -1,16 +1,13 @@
 {
   "name": "chiffrio-backend",
   "version": "1.0.0",
-  "description": "Backend for Chiffrio game with Socket.IO",
+  "description": "Backend for Chiffrio game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.7.5"
   }
 }

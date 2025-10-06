@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
+// En production, remplace '*' par l'URL de ton frontend (ex: https://ton-frontend.onrender.com)
 const io = new Server(server, {
     cors: {
         origin: '*',
@@ -24,10 +25,11 @@ const generateRoomId = () => {
     return result;
 };
 
-const checkGuess = (secret, guess) => {
+const checkGuess = (secret, guess, settings) => {
     let wellPlaced = 0;
     let misplaced = 0;
     const wellPlacedDigits = [];
+    const misplacedDigits = [];
     const secretArr = secret.split('');
     const guessArr = guess.split('');
 
@@ -45,12 +47,18 @@ const checkGuess = (secret, guess) => {
             const secretIndex = secretArr.indexOf(guessArr[i]);
             if (secretIndex > -1) {
                 misplaced++;
+                misplacedDigits.push(i);
                 secretArr[secretIndex] = 'x';
             }
         }
     }
 
-    return { wellPlaced, misplaced, wellPlacedDigits };
+    return {
+        wellPlaced,
+        misplaced: settings.showMisplaced ? misplaced : 0,
+        wellPlacedDigits: settings.showWellPlacedDigits ? wellPlacedDigits : [],
+        misplacedDigits: settings.showMisplacedDigits ? misplacedDigits : []
+    };
 };
 
 const validateNumber = (number, gameSettings) => {
@@ -95,6 +103,11 @@ io.on('connection', (socket) => {
             return;
         }
 
+        if (pseudo.length < 2) {
+            socket.emit('error', 'Pseudo trop court (au moins 2 caractères).');
+            return;
+        }
+
         room.players.push({ id: socket.id, pseudo, secret: null, sessionId, connected: true });
         room.gameState = 'setup';
         socket.join(roomId);
@@ -108,6 +121,8 @@ io.on('connection', (socket) => {
         io.to(room.players[0].id).emit('playerJoined', { players: playersData, gameSettings: room.gameSettings });
         console.log(`${pseudo} joined room ${roomId}`);
     });
+
+    // ... (le reste du server.js reste identique à la version précédente)
 
     socket.on('reconnect', ({ sessionId }) => {
         const roomId = Object.keys(rooms).find(key =>
@@ -199,7 +214,7 @@ io.on('connection', (socket) => {
 
         const opponent = room.players.find(p => p.sessionId !== sessionId);
         const opponentSecret = room.secrets[opponent.id];
-        const feedback = checkGuess(opponentSecret, guess);
+        const feedback = checkGuess(opponentSecret, guess, room.gameSettings);
 
         const newEntry = {
             guess,

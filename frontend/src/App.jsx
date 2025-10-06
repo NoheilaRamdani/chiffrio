@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 
-const socket = io('http://localhost:3001');
-
+const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001');
 const BackgroundShapes = () => {
     return (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1]">
             <svg className="absolute top-20 left-1/4 w-32 h-32 opacity-15" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1" className="text-indigo-400"/>
             </svg>
@@ -26,7 +25,7 @@ const BackgroundShapes = () => {
 };
 
 function App() {
-    const [gameState, setGameState] = useState('lobby');
+    const [gameState, setGameState] = useState('home');
     const [pseudo, setPseudo] = useState('');
     const [roomId, setRoomId] = useState('');
     const [playerSecret, setPlayerSecret] = useState(['', '', '', '']);
@@ -41,11 +40,21 @@ function App() {
         digits: 4,
         allowDuplicates: true,
         showMisplaced: true,
-        showWellPlacedDigits: true
+        showWellPlacedDigits: true,
+        showMisplacedDigits: true
     });
+    const [savedSettings, setSavedSettings] = useState({
+        digits: 4,
+        allowDuplicates: true,
+        showMisplaced: true,
+        showWellPlacedDigits: true,
+        showMisplacedDigits: true
+    });
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [imReady, setImReady] = useState(false);
     const [notepadEntries, setNotepadEntries] = useState([]);
     const [currentNotepadEntry, setCurrentNotepadEntry] = useState(['', '', '', '']);
+    const [eliminatedDigits, setEliminatedDigits] = useState(new Set());
     const [historyViewMode, setHistoryViewMode] = useState('grid');
     const [historySortMode, setHistorySortMode] = useState('recent');
     const [reconnecting, setReconnecting] = useState(false);
@@ -102,7 +111,9 @@ function App() {
                 setMyPlayerId(data.gameState.myPlayerId);
                 setCurrentPlayer(data.gameState.currentPlayer);
                 setIsMyTurn(data.gameState.isMyTurn);
-                setGameSettings(data.gameState.gameSettings);
+                const newSettings = data.gameState.gameSettings;
+                setGameSettings(newSettings);
+                setSavedSettings(newSettings);
                 setHistory(data.gameState.history || []);
                 setPlayerSecret(data.gameState.playerSecret || Array(data.gameState.gameSettings.digits).fill(''));
                 setMessage('Reconnexion réussie ! Vous pouvez reprendre la partie.');
@@ -115,12 +126,12 @@ function App() {
             setGameState('hosting');
             setMessage(`Salle créée ! Code: ${data.roomId}`);
             setPlayers(prev => ({ ...prev, player1: pseudo }));
-            if (data.gameSettings) {
-                setGameSettings(data.gameSettings);
-                setPlayerSecret(Array(data.gameSettings.digits).fill(''));
-                setGuess(Array(data.gameSettings.digits).fill(''));
-                setCurrentNotepadEntry(Array(data.gameSettings.digits).fill(''));
-            }
+            const newSettings = data.gameSettings;
+            setGameSettings(newSettings);
+            setSavedSettings(newSettings);
+            setPlayerSecret(Array(newSettings.digits).fill(''));
+            setGuess(Array(newSettings.digits).fill(''));
+            setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
         });
 
         socket.on('roomJoined', (data) => {
@@ -129,12 +140,12 @@ function App() {
             setMyPlayerId(2);
             setGameState('setup');
             setMessage('Connexion réussie ! Choisis ton nombre secret.');
-            if (data.gameSettings) {
-                setGameSettings(data.gameSettings);
-                setPlayerSecret(Array(data.gameSettings.digits).fill(''));
-                setGuess(Array(data.gameSettings.digits).fill(''));
-                setCurrentNotepadEntry(Array(data.gameSettings.digits).fill(''));
-            }
+            const newSettings = data.gameSettings;
+            setGameSettings(newSettings);
+            setSavedSettings(newSettings);
+            setPlayerSecret(Array(newSettings.digits).fill(''));
+            setGuess(Array(newSettings.digits).fill(''));
+            setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
         });
 
         socket.on('error', (message) => {
@@ -145,12 +156,12 @@ function App() {
             setPlayers(data.players);
             setMessage(`${data.players.player2} a rejoint la partie !`);
             setGameState('setup');
-            if (data.gameSettings) {
-                setGameSettings(data.gameSettings);
-                setPlayerSecret(Array(data.gameSettings.digits).fill(''));
-                setGuess(Array(data.gameSettings.digits).fill(''));
-                setCurrentNotepadEntry(Array(data.gameSettings.digits).fill(''));
-            }
+            const newSettings = data.gameSettings;
+            setGameSettings(newSettings);
+            setSavedSettings(newSettings);
+            setPlayerSecret(Array(newSettings.digits).fill(''));
+            setGuess(Array(newSettings.digits).fill(''));
+            setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
         });
 
         socket.on('gameStart', (data) => {
@@ -159,7 +170,9 @@ function App() {
             setCurrentPlayer(data.currentPlayer);
             setMessage(`C'est parti ! C'est à ${getPlayerName(data.currentPlayer)} de jouer.`);
             if (data.gameSettings) {
-                setGameSettings(data.gameSettings);
+                const newSettings = data.gameSettings;
+                setGameSettings(newSettings);
+                setSavedSettings(newSettings);
             }
         });
 
@@ -170,6 +183,7 @@ function App() {
                 wellPlaced: data.feedback.wellPlaced,
                 misplaced: data.feedback.misplaced,
                 wellPlacedDigits: data.feedback.wellPlacedDigits,
+                misplacedDigits: data.feedback.misplacedDigits,
                 timestamp: Date.now()
             };
 
@@ -196,12 +210,14 @@ function App() {
             setHistory([]);
             setCurrentNotepadEntry(Array(gameSettings.digits).fill(''));
             setNotepadEntries([]);
+            setEliminatedDigits(new Set());
             setImReady(false);
             setMessage('La partie a été relancée ! Choisis ton nouveau nombre secret.');
         });
 
         socket.on('settingsUpdated', (newSettings) => {
             setGameSettings(newSettings);
+            setSavedSettings(newSettings);
             setPlayerSecret(Array(newSettings.digits).fill(''));
             setGuess(Array(newSettings.digits).fill(''));
             setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
@@ -223,17 +239,22 @@ function App() {
         };
     }, [myPlayerId, pseudo, players, gameSettings.digits, sessionId]);
 
+    useEffect(() => {
+        const isEqual = JSON.stringify(gameSettings) === JSON.stringify(savedSettings);
+        setHasUnsavedChanges(!isEqual);
+    }, [gameSettings, savedSettings]);
+
     const createRoom = () => {
-        if (!pseudo.trim()) {
-            setMessage('Choisis un pseudo d\'abord !');
+        if (!pseudo.trim() || pseudo.trim().length < 2) {
+            setMessage('Choisis un pseudo valide (au moins 2 caractères) !');
             return;
         }
         socket.emit('createRoom', { pseudo: pseudo.trim(), gameSettings, sessionId });
     };
 
     const joinRoom = () => {
-        if (!pseudo.trim() || !roomId.trim()) {
-            setMessage('Remplis tous les champs !');
+        if (!pseudo.trim() || pseudo.trim().length < 2 || !roomId.trim()) {
+            setMessage('Remplis tous les champs avec un pseudo valide (au moins 2 caractères) !');
             return;
         }
         socket.emit('joinRoom', { pseudo: pseudo.trim(), roomId: roomId.trim(), sessionId });
@@ -315,6 +336,18 @@ function App() {
     const clearAllNotepad = () => {
         setNotepadEntries([]);
         setCurrentNotepadEntry(Array(gameSettings.digits).fill(''));
+    };
+
+    const toggleEliminated = (d) => {
+        setEliminatedDigits(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(d)) {
+                newSet.delete(d);
+            } else {
+                newSet.add(d);
+            }
+            return newSet;
+        });
     };
 
     const handleSecretSubmit = () => {
@@ -424,11 +457,20 @@ function App() {
                 {entries.map((entry, index) => (
                     <div
                         key={index}
-                        className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-2 text-center border border-pink-200 hover:shadow-md transition-shadow"
+                        className="bg-white rounded-lg p-2 text-center border border-pink-200 hover:shadow-md transition-shadow"
                     >
                         <div className="font-mono text-sm font-bold text-indigo-800 mb-1">
                             {entry.guess.split('').map((digit, i) => (
-                                <span key={i} className={entry.wellPlacedDigits.includes(i) ? 'text-green-600' : ''}>
+                                <span
+                                    key={i}
+                                    className={
+                                        entry.wellPlacedDigits.includes(i)
+                                            ? 'text-green-600'
+                                            : entry.misplacedDigits.includes(i)
+                                                ? 'text-orange-600'
+                                                : ''
+                                    }
+                                >
                                     {digit}
                                 </span>
                             ))}
@@ -455,12 +497,21 @@ function App() {
                 {entries.map((entry, index) => (
                     <div
                         key={index}
-                        className="bg-gradient-to-r from-pink-50 to-purple-50 p-3 rounded-xl border-l-4 border-pink-400"
+                        className="bg-white p-3 rounded-xl border-l-4 border-pink-400"
                     >
                         <div className="flex justify-between items-center">
                             <span className="font-mono text-lg font-bold text-indigo-800 bg-white px-2 py-1 rounded-lg">
                                 {entry.guess.split('').map((digit, i) => (
-                                    <span key={i} className={entry.wellPlacedDigits.includes(i) ? 'text-green-600' : ''}>
+                                    <span
+                                        key={i}
+                                        className={
+                                            entry.wellPlacedDigits.includes(i)
+                                                ? 'text-green-600'
+                                                : entry.misplacedDigits.includes(i)
+                                                    ? 'text-orange-600'
+                                                    : ''
+                                        }
+                                    >
                                         {digit}
                                     </span>
                                 ))}
@@ -482,8 +533,8 @@ function App() {
         );
     };
 
-    const renderGameSettings = () => (
-        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-200 mt-6">
+    const renderGameSettings = (showUpdateButton = false, isDisabled = false) => (
+        <div className="bg-white rounded-2xl p-6 border border-purple-200 mt-6">
             <h3 className="font-bold text-indigo-800 mb-4 text-lg flex items-center gap-2">
                 ⚙️ <span>Règles du jeu</span>
             </h3>
@@ -500,7 +551,7 @@ function App() {
                             setCurrentNotepadEntry(Array(digits).fill(''));
                         }}
                         className="bg-white border border-purple-300 rounded-lg px-3 py-2 text-sm font-semibold"
-                        disabled={myPlayerId !== 1}
+                        disabled={isDisabled}
                     >
                         <option value={3}>3 chiffres</option>
                         <option value={4}>4 chiffres</option>
@@ -514,7 +565,7 @@ function App() {
                         checked={gameSettings.allowDuplicates}
                         onChange={(e) => setGameSettings(prev => ({ ...prev, allowDuplicates: e.target.checked }))}
                         className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
-                        disabled={myPlayerId !== 1}
+                        disabled={isDisabled}
                     />
                 </label>
                 <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
@@ -524,23 +575,33 @@ function App() {
                         checked={gameSettings.showMisplaced}
                         onChange={(e) => setGameSettings(prev => ({ ...prev, showMisplaced: e.target.checked }))}
                         className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
-                        disabled={myPlayerId !== 1}
+                        disabled={isDisabled}
                     />
                 </label>
                 <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                    <span className="text-purple-700 font-medium">Afficher les chiffres bien placés</span>
+                    <span className="text-purple-700 font-medium">Afficher les positions des bien placés</span>
                     <input
                         type="checkbox"
                         checked={gameSettings.showWellPlacedDigits}
                         onChange={(e) => setGameSettings(prev => ({ ...prev, showWellPlacedDigits: e.target.checked }))}
                         className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
-                        disabled={myPlayerId !== 1}
+                        disabled={isDisabled}
                     />
                 </label>
-                {myPlayerId === 1 && (
+                <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
+                    <span className="text-purple-700 font-medium">Afficher les positions des mal placés</span>
+                    <input
+                        type="checkbox"
+                        checked={gameSettings.showMisplacedDigits}
+                        onChange={(e) => setGameSettings(prev => ({ ...prev, showMisplacedDigits: e.target.checked }))}
+                        className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                        disabled={isDisabled}
+                    />
+                </label>
+                {showUpdateButton && (
                     <button
                         onClick={updateGameSettings}
-                        className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white p-3 rounded-xl text-lg font-bold hover:from-pink-600 hover:to-pink-700 transition-all duration-300 shadow-lg"
+                        className={`w-full bg-pink-600 text-white p-3 rounded-xl text-lg font-bold hover:bg-pink-700 transition-all duration-300 shadow-lg ${hasUnsavedChanges ? 'animate-pulse' : ''}`}
                     >
                         Mettre à jour les règles
                     </button>
@@ -550,7 +611,7 @@ function App() {
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-100 font-sans">
+        <div className="min-h-screen bg-indigo-50 font-sans">
             <BackgroundShapes />
 
             {reconnecting && (
@@ -559,19 +620,19 @@ function App() {
                 </div>
             )}
 
-            <header className="bg-white/80 backdrop-blur-md shadow-lg border-b border-purple-200 p-4 top-0 z-10 relative">
+            <header className="bg-white shadow-lg border-b border-purple-200 p-4 top-0 z-10 relative">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-indigo-600 rounded-full flex items-center justify-center">
+                            <div className="w-10 h-10 bg-pink-600 rounded-full flex items-center justify-center">
                                 <span className="text-white font-bold text-xl">🔢</span>
                             </div>
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-indigo-600 bg-clip-text text-transparent">
+                            <h1 className="text-3xl font-bold text-indigo-600">
                                 Chiffrio
                             </h1>
                         </div>
                         {roomId && (
-                            <div className="bg-gradient-to-r from-pink-100 to-indigo-100 px-4 py-2 rounded-full border border-purple-200">
+                            <div className="bg-indigo-100 px-4 py-2 rounded-full border border-purple-200">
                                 <span className="text-sm font-semibold text-purple-700">Room: {roomId}</span>
                             </div>
                         )}
@@ -586,7 +647,7 @@ function App() {
                             </div>
                             <button
                                 onClick={handleRestart}
-                                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-lg"
+                                className="bg-orange-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-orange-700 transition-all duration-300 shadow-lg"
                             >
                                 🔄 Relancer
                             </button>
@@ -595,89 +656,101 @@ function App() {
                 </div>
             </header>
 
-            <div className="bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-500 text-white p-4 relative z-10">
+            <div className="bg-indigo-600 text-white p-4 relative z-10">
                 <div className="max-w-7xl mx-auto text-center">
                     <p className="font-semibold text-lg">{message}</p>
                 </div>
             </div>
 
             <div className="max-w-7xl mx-auto p-6 relative z-10">
-                {gameState === 'lobby' && (
-                    <div className="grid grid-cols-2 gap-8 mt-8">
-                        <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
-                            <div className="text-center mb-8">
-                                <div className="w-20 h-20 bg-gradient-to-br from-pink-400 to-pink-600 rounded-2xl flex items-center justify-center text-3xl text-white mx-auto mb-6 shadow-lg">
-                                    👑
-                                </div>
-                                <h2 className="text-3xl font-bold text-indigo-800 mb-3">Créer une partie</h2>
-                                <p className="text-purple-600 text-lg">Deviens l'hôte et invite tes amis</p>
-                            </div>
-                            <div className="space-y-6">
-                                <input
-                                    type="text"
-                                    value={pseudo}
-                                    onChange={(e) => setPseudo(e.target.value)}
-                                    placeholder="Ton pseudo..."
-                                    className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-400 text-lg font-medium transition-all"
-                                />
-                                {renderGameSettings()}
-                                <button
-                                    onClick={createRoom}
-                                    className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 rounded-xl text-xl font-bold hover:from-pink-600 hover:to-pink-700 transition-all duration-300 shadow-lg"
-                                >
-                                    🚀 Créer la partie
-                                </button>
-                            </div>
+                {gameState === 'home' && (
+                    <div className="max-w-md mx-auto mt-20 bg-white rounded-3xl p-8 shadow-xl border border-purple-200">
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-bold text-indigo-800 mb-3">Bienvenue !</h2>
+                            <p className="text-purple-600 text-lg">Choisis ton pseudo pour commencer</p>
                         </div>
+                        <input
+                            type="text"
+                            value={pseudo}
+                            onChange={(e) => setPseudo(e.target.value)}
+                            placeholder="Ton pseudo..."
+                            className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-400 text-lg font-medium transition-all"
+                        />
+                        <div className="grid grid-cols-2 gap-4 mt-6">
+                            <button
+                                onClick={() => {
+                                    if (pseudo.trim() && pseudo.trim().length >= 2) setGameState('createSettings');
+                                    else setMessage('Choisis un pseudo valide (au moins 2 caractères) !');
+                                }}
+                                className="bg-pink-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-pink-700 transition-all duration-300 shadow-lg"
+                            >
+                                Créer une partie
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (pseudo.trim() && pseudo.trim().length >= 2) setGameState('joinInput');
+                                    else setMessage('Choisis un pseudo valide (au moins 2 caractères) !');
+                                }}
+                                className="bg-indigo-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-indigo-700 transition-all duration-300 shadow-lg"
+                            >
+                                Rejoindre
+                            </button>
+                        </div>
+                    </div>
+                )}
 
-                        <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
-                            <div className="text-center mb-8">
-                                <div className="w-20 h-20 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-2xl flex items-center justify-center text-3xl text-white mx-auto mb-6 shadow-lg">
-                                    🎮
-                                </div>
-                                <h2 className="text-3xl font-bold text-indigo-800 mb-3">Rejoindre une partie</h2>
-                                <p className="text-purple-600 text-lg">Entre le code d'invitation</p>
-                            </div>
-                            <div className="space-y-6">
-                                <input
-                                    type="text"
-                                    value={pseudo}
-                                    onChange={(e) => setPseudo(e.target.value)}
-                                    placeholder="Ton pseudo..."
-                                    className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 text-lg font-medium transition-all"
-                                />
-                                <input
-                                    type="text"
-                                    value={roomId}
-                                    onChange={(e) => setRoomId(e.target.value.toUpperCase())}
-                                    placeholder="Code de la salle..."
-                                    className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 text-center font-mono text-xl font-bold tracking-wider transition-all"
-                                    maxLength={6}
-                                />
-                                <button
-                                    onClick={joinRoom}
-                                    className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-4 rounded-xl text-xl font-bold hover:from-indigo-600 hover:to-indigo-700 transition-all duration-300 shadow-lg"
-                                >
-                                    🎯 Rejoindre
-                                </button>
-                            </div>
+                {gameState === 'createSettings' && (
+                    <div className="max-w-md mx-auto mt-20 bg-white rounded-3xl p-8 shadow-xl border border-purple-200">
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-bold text-indigo-800 mb-3">Configurer la partie</h2>
+                            <p className="text-purple-600 text-lg">Choisis les règles du jeu</p>
                         </div>
+                        {renderGameSettings(false, false)}
+                        <button
+                            onClick={createRoom}
+                            className="w-full bg-pink-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-pink-700 transition-all duration-300 shadow-lg mt-6"
+                        >
+                            Créer la partie
+                        </button>
+                    </div>
+                )}
+
+                {gameState === 'joinInput' && (
+                    <div className="max-w-md mx-auto mt-20 bg-white rounded-3xl p-8 shadow-xl border border-purple-200">
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-bold text-indigo-800 mb-3">Rejoindre une partie</h2>
+                            <p className="text-purple-600 text-lg">Entre le code de la salle</p>
+                        </div>
+                        <input
+                            type="text"
+                            value={roomId}
+                            onChange={(e) => setRoomId(e.target.value.toUpperCase())}
+                            placeholder="Code de la salle..."
+                            className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 text-center font-mono text-xl font-bold tracking-wider transition-all"
+                            maxLength={6}
+                        />
+                        <button
+                            onClick={joinRoom}
+                            className="w-full bg-indigo-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-indigo-700 transition-all duration-300 shadow-lg mt-6"
+                        >
+                            Rejoindre
+                        </button>
                     </div>
                 )}
 
                 {gameState === 'hosting' && (
                     <div className="flex justify-center mt-12">
-                        <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 shadow-2xl text-center max-w-md border border-white/20">
+                        <div className="bg-white rounded-3xl p-12 shadow-2xl text-center max-w-md border border-purple-200">
                             <div className="text-8xl mb-6 animate-pulse">⏳</div>
                             <h2 className="text-3xl font-bold text-indigo-800 mb-6">Salle créée !</h2>
-                            <div className="bg-gradient-to-br from-pink-100 to-indigo-100 rounded-2xl p-6 mb-8 border border-purple-200">
+                            <div className="bg-indigo-100 rounded-2xl p-6 mb-8 border border-purple-200">
                                 <p className="text-sm text-purple-700 mb-2 font-semibold">Code de la salle</p>
                                 <p className="text-4xl font-bold text-indigo-800 tracking-wider font-mono">{roomId}</p>
                             </div>
-                            {myPlayerId === 1 && renderGameSettings()}
+                            {renderGameSettings(true, false)}
                             <button
                                 onClick={copyRoomLink}
-                                className="bg-gradient-to-r from-pink-500 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 shadow-lg mt-6"
+                                className="bg-pink-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-pink-700 transition-all duration-300 shadow-lg mt-6"
                             >
                                 📋 Copier le lien
                             </button>
@@ -687,13 +760,13 @@ function App() {
 
                 {gameState === 'setup' && (
                     <div className="max-w-3xl mx-auto mt-8">
-                        <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 shadow-2xl text-center border border-white/20">
+                        <div className="bg-white rounded-3xl p-12 shadow-2xl text-center border border-purple-200">
                             <h2 className="text-4xl font-bold text-indigo-800 mb-4">🤫 Choisis ton nombre secret</h2>
                             <p className="text-purple-600 mb-2 text-lg">
                                 {getOpponentName() ? `${getOpponentName()} attend ta décision...` : 'En attente de l\'autre joueur...'}
                             </p>
 
-                            <div className="bg-gradient-to-r from-pink-50 to-indigo-50 rounded-2xl p-4 mb-8 border border-pink-100">
+                            <div className="bg-indigo-50 rounded-2xl p-4 mb-8 border border-pink-100">
                                 <div className="flex flex-wrap justify-center gap-4 text-sm">
                                     <span className="bg-white px-3 py-1 rounded-full border border-pink-200 text-pink-700 font-semibold">
                                         {gameSettings.digits} chiffres
@@ -717,14 +790,22 @@ function App() {
                                             ? 'bg-green-100 border-green-200 text-green-700'
                                             : 'bg-red-100 border-red-200 text-red-700'
                                     }`}>
-                                        {gameSettings.showWellPlacedDigits ? '✓' : '✗'} Chiffres bien placés
+                                        {gameSettings.showWellPlacedDigits ? '✓' : '✗'} Positions bien placés
+                                    </span>
+                                    <span className={`px-3 py-1 rounded-full border font-semibold ${
+                                        gameSettings.showMisplacedDigits
+                                            ? 'bg-green-100 border-green-200 text-green-700'
+                                            : 'bg-red-100 border-red-200 text-red-700'
+                                    }`}>
+                                        {gameSettings.showMisplacedDigits ? '✓' : '✗'} Positions mal placés
                                     </span>
                                 </div>
                             </div>
 
-                            {myPlayerId === 1 && renderGameSettings()}
+                            {myPlayerId === 1 && renderGameSettings(true, false)}
+                            {myPlayerId !== 1 && renderGameSettings(false, true)}
 
-                            <div className="mb-10">
+                            <div className="mb-10 mt-10">
                                 {inputFields(playerSecret, handleSecretInputChange, false, secretInputs)}
                             </div>
                             <button
@@ -733,7 +814,7 @@ function App() {
                                 className={`px-12 py-4 rounded-xl text-xl font-bold transition-all duration-300 shadow-lg ${
                                     imReady
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-pink-500 to-pink-600 text-white hover:from-pink-600 hover:to-pink-700'
+                                        : 'bg-pink-600 text-white hover:bg-pink-700'
                                 }`}
                             >
                                 {imReady ? '✅ Nombre validé' : '🔒 Valider mon secret'}
@@ -749,7 +830,7 @@ function App() {
 
                 {gameState === 'playing' && (
                     <div className="grid grid-cols-5 gap-6 mt-6">
-                        <div className="col-span-1 bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-indigo-200">
+                        <div className="col-span-1 bg-white rounded-3xl p-6 shadow-xl border border-indigo-200">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-bold text-lg text-indigo-800 flex items-center gap-2">
                                     📝 <span>Bloc-notes</span>
@@ -783,7 +864,7 @@ function App() {
                                 </div>
                             </div>
 
-                            <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
+                            <div className="space-y-2 max-h-[calc(100vh-500px)] overflow-y-auto">
                                 {notepadEntries.length === 0 ? (
                                     <p className="text-sm text-indigo-500 italic text-center py-4">
                                         Aucune combinaison testée
@@ -813,9 +894,30 @@ function App() {
                                     ))
                                 )}
                             </div>
+
+                            <div className="mt-6 pt-4 border-t border-indigo-200">
+                                <h3 className="font-bold text-lg text-indigo-800 mb-2 flex items-center gap-2">
+                                    ❌ <span>Chiffres éliminés</span>
+                                </h3>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {[...Array(10).keys()].map(d => (
+                                        <button
+                                            key={d}
+                                            onClick={() => toggleEliminated(d)}
+                                            className={`w-full h-10 rounded-lg font-bold text-lg transition-colors ${
+                                                eliminatedDigits.has(d)
+                                                    ? 'bg-red-500 text-white line-through hover:bg-red-600'
+                                                    : 'bg-white text-indigo-800 border border-indigo-300 hover:bg-indigo-50'
+                                            }`}
+                                        >
+                                            {d}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="col-span-2 bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-purple-200">
+                        <div className="col-span-2 bg-white rounded-3xl p-8 shadow-xl border border-purple-200">
                             <div className="text-center mb-8">
                                 <h2 className="text-2xl font-bold text-indigo-800 mb-4">
                                     {isMyTurn ? `🎯 À ton tour !` : `⏳ Tour de ${getOpponentName()}`}
@@ -824,7 +926,7 @@ function App() {
                                 <div className="flex justify-center items-center gap-6 mb-6">
                                     <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
                                         currentPlayer === 1
-                                            ? 'bg-gradient-to-r from-pink-100 to-pink-200 border-2 border-pink-400 shadow-md'
+                                            ? 'bg-pink-100 border-2 border-pink-400 shadow-md'
                                             : 'bg-purple-100 border border-purple-300'
                                     }`}>
                                         <div className={`w-3 h-3 rounded-full ${
@@ -837,7 +939,7 @@ function App() {
                                     <span className="text-purple-400 font-bold">VS</span>
                                     <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
                                         currentPlayer === 2
-                                            ? 'bg-gradient-to-r from-indigo-100 to-indigo-200 border-2 border-indigo-400 shadow-md'
+                                            ? 'bg-indigo-100 border-2 border-indigo-400 shadow-md'
                                             : 'bg-purple-100 border border-purple-300'
                                     }`}>
                                         <div className={`w-3 h-3 rounded-full ${
@@ -860,14 +962,14 @@ function App() {
                                 className={`w-full p-4 rounded-xl text-xl font-bold transition-all duration-300 shadow-lg ${
                                     !isMyTurn
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-pink-500 to-indigo-600 text-white hover:from-pink-600 hover:to-indigo-700'
+                                        : 'bg-pink-600 text-white hover:bg-pink-700'
                                 }`}
                             >
                                 🚀 Proposer ma combinaison
                             </button>
                         </div>
 
-                        <div className="col-span-2 bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-pink-200">
+                        <div className="col-span-2 bg-white rounded-3xl p-6 shadow-xl border border-pink-200">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-xl font-bold text-pink-800 flex items-center gap-2">
                                     📊 <span>Mon historique</span>
@@ -918,10 +1020,19 @@ function App() {
                                 <div className="max-h-32 overflow-y-auto">
                                     <div className="grid grid-cols-4 gap-1">
                                         {history.filter(h => h.player !== myPlayerId).slice(-16).map((entry, index) => (
-                                            <div key={index} className="bg-gradient-to-r from-green-50 to-lime-50 rounded-lg p-1 text-center border border-green-200">
+                                            <div key={index} className="bg-white rounded-lg p-1 text-center border border-green-200">
                                                 <div className="font-mono text-xs font-bold text-green-800">
                                                     {entry.guess.split('').map((digit, i) => (
-                                                        <span key={i} className={entry.wellPlacedDigits.includes(i) ? 'text-green-600' : ''}>
+                                                        <span
+                                                            key={i}
+                                                            className={
+                                                                entry.wellPlacedDigits.includes(i)
+                                                                    ? 'text-green-600'
+                                                                    : entry.misplacedDigits.includes(i)
+                                                                        ? 'text-orange-600'
+                                                                        : ''
+                                                            }
+                                                        >
                                                             {digit}
                                                         </span>
                                                     ))}
@@ -947,24 +1058,24 @@ function App() {
 
                 {gameState === 'won' && (
                     <div className="flex justify-center mt-12">
-                        <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-16 shadow-2xl text-center max-w-lg border border-white/20">
+                        <div className="bg-white rounded-3xl p-16 shadow-2xl text-center max-w-lg border border-purple-200">
                             <div className="text-9xl mb-8 animate-bounce">🏆</div>
-                            <h2 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-indigo-500 bg-clip-text text-transparent mb-8">
+                            <h2 className="text-4xl font-bold text-indigo-600 mb-8">
                                 Partie terminée !
                             </h2>
-                            <div className="bg-gradient-to-r from-pink-50 to-indigo-50 rounded-2xl p-6 mb-8 border border-pink-200">
+                            <div className="bg-indigo-50 rounded-2xl p-6 mb-8 border border-pink-200">
                                 <p className="text-purple-700 text-lg">Félicitations pour cette belle partie ! 🎉</p>
                             </div>
                             <div className="flex gap-4">
                                 <button
                                     onClick={handleRestart}
-                                    className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-8 py-4 rounded-xl text-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-lg"
+                                    className="flex-1 bg-orange-600 text-white px-8 py-4 rounded-xl text-xl font-bold hover:bg-orange-700 transition-all duration-300 shadow-lg"
                                 >
                                     🔄 Relancer
                                 </button>
                                 <button
                                     onClick={() => window.location.reload()}
-                                    className="flex-1 bg-gradient-to-r from-pink-500 to-indigo-500 text-white px-8 py-4 rounded-xl text-xl font-bold hover:from-pink-600 hover:to-indigo-600 transition-all duration-300 shadow-lg"
+                                    className="flex-1 bg-pink-600 text-white px-8 py-4 rounded-xl text-xl font-bold hover:bg-pink-700 transition-all duration-300 shadow-lg"
                                 >
                                     🔙 Retour au lobby
                                 </button>
