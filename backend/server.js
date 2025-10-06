@@ -25,16 +25,6 @@ const io = new Server(server, {
     pingInterval: 25000
 });
 
-// Supprimez cette partie, car le frontend est servi séparément
-/*
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static('../frontend/dist'));
-    app.get('*', (req, res) => {
-        res.sendFile('index.html', { root: '../frontend/dist' });
-    });
-}
-*/
-
 const rooms = {};
 const RECONNECTION_TIMEOUT = 30000;
 
@@ -328,6 +318,7 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(process.env.PORT || 3001, '0.0.0.0', () => {
-    console.log(`Server is running on port ${process.env.PORT || 3001}`);
+const PORT = process.env.PORT;
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
 });
