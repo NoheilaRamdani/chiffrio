@@ -26,7 +26,9 @@ const io = new Server(server, {
         ],
         methods: ['GET', 'POST'],
         credentials: true
-    }
+    },
+    transports: ['websocket', 'polling'], // Ajoutez ceci
+    allowEIO3: true // Ajoutez ceci pour la compatibilité
 });
 
 
@@ -91,6 +93,10 @@ const validateNumber = (number, gameSettings) => {
 };
 app.get('/test', (req, res) => {
     res.send('Backend is working!');
+});
+// Ajoutez aussi :
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date() });
 });
 io.on('connection', (socket) => {
     console.log('a user connected:', socket.id);
@@ -325,7 +331,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
 });
