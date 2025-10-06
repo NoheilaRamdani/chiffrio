@@ -84,7 +84,9 @@ const validateNumber = (number, gameSettings) => {
 
     return { valid: true };
 };
-
+app.get('/test', (req, res) => {
+    res.send('Backend is working!');
+});
 io.on('connection', (socket) => {
     console.log('a user connected:', socket.id);
 
