@@ -59,6 +59,10 @@ function App() {
     const [historySortMode, setHistorySortMode] = useState('recent');
     const [reconnecting, setReconnecting] = useState(false);
     const [sessionId, setSessionId] = useState(null);
+    // New states for errors
+    const [secretError, setSecretError] = useState('');
+    const [guessError, setGuessError] = useState('');
+    const [notepadError, setNotepadError] = useState('');
 
     const secretInputs = useRef([]);
     const guessInputs = useRef([]);
@@ -221,6 +225,7 @@ function App() {
             setPlayerSecret(Array(newSettings.digits).fill(''));
             setGuess(Array(newSettings.digits).fill(''));
             setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
+            setImReady(false);
             setMessage('Les règles ont été mises à jour par l\'hôte.');
         });
 
@@ -268,11 +273,45 @@ function App() {
         socket.emit('restartGame', { roomId, sessionId });
     };
 
+    const handleSecretInputKeyDown = (e, index) => {
+        if (e.key === 'Enter') {
+            handleSecretSubmit();
+        }
+        if (e.key === 'Backspace') {
+            if (!playerSecret[index] && index > 0) {
+                secretInputs.current[index - 1]?.focus();
+            }
+        }
+    };
+
+    const handleGuessInputKeyDown = (e, index) => {
+        if (e.key === 'Enter') {
+            handleGuessSubmit();
+        }
+        if (e.key === 'Backspace') {
+            if (!guess[index] && index > 0) {
+                guessInputs.current[index - 1]?.focus();
+            }
+        }
+    };
+
+    const handleNotepadInputKeyDown = (e, index) => {
+        if (e.key === 'Enter') {
+            addNotepadEntry();
+        }
+        if (e.key === 'Backspace') {
+            if (!currentNotepadEntry[index] && index > 0) {
+                notepadInputs.current[index - 1]?.focus();
+            }
+        }
+    };
+
     const handleSecretInputChange = (e, index) => {
         const value = e.target.value.replace(/\D/g, '').slice(-1);
         const newSecret = [...playerSecret];
         newSecret[index] = value;
         setPlayerSecret(newSecret);
+        setSecretError(''); // Clear error on change
 
         if (value && index < gameSettings.digits - 1) {
             secretInputs.current[index + 1]?.focus();
@@ -284,6 +323,7 @@ function App() {
         const newGuess = [...guess];
         newGuess[index] = value;
         setGuess(newGuess);
+        setGuessError(''); // Clear error on change
 
         if (value && index < gameSettings.digits - 1) {
             guessInputs.current[index + 1]?.focus();
@@ -295,6 +335,7 @@ function App() {
         const newEntry = [...currentNotepadEntry];
         newEntry[index] = value;
         setCurrentNotepadEntry(newEntry);
+        setNotepadError(''); // Clear error on change
 
         if (value && index < gameSettings.digits - 1) {
             notepadInputs.current[index + 1]?.focus();
@@ -304,6 +345,7 @@ function App() {
     const addNotepadEntry = () => {
         const entry = currentNotepadEntry.join('');
         if (entry.length !== gameSettings.digits) {
+            setNotepadError(`Complétez avec ${gameSettings.digits} chiffres pour ajouter.`);
             return;
         }
 
@@ -316,6 +358,7 @@ function App() {
         setNotepadEntries(prev => [...prev, newEntry]);
         setCurrentNotepadEntry(Array(gameSettings.digits).fill(''));
         notepadInputs.current[0]?.focus();
+        setNotepadError('');
     };
 
     const updateNotepadEntry = (id, notes) => {
@@ -353,39 +396,41 @@ function App() {
     const handleSecretSubmit = () => {
         const secret = playerSecret.join('');
         if (secret.length !== gameSettings.digits || !/^\d+$/.test(secret)) {
-            setMessage(`Entre ${gameSettings.digits} chiffres valides !`);
+            setSecretError(`Entrez ${gameSettings.digits} chiffres valides !`);
             return;
         }
 
         if (!gameSettings.allowDuplicates && new Set(secret.split('')).size !== secret.length) {
-            setMessage('Pas de chiffres en double autorisés !');
+            setSecretError('Les doublons de chiffres ne sont pas autorisés selon les règles !');
             return;
         }
 
         setImReady(true);
         socket.emit('setSecret', { secret, player: myPlayerId, sessionId });
         setMessage('Nombre secret enregistré ! En attente de l\'autre joueur...');
+        setSecretError('');
     };
 
     const handleGuessSubmit = () => {
         if (!isMyTurn) {
-            setMessage('Pas ton tour !');
+            setGuessError('Ce n\'est pas votre tour de jouer.');
             return;
         }
 
         const guessStr = guess.join('');
         if (guessStr.length !== gameSettings.digits || !/^\d+$/.test(guessStr)) {
-            setMessage(`Entre ${gameSettings.digits} chiffres valides !`);
+            setGuessError(`Entrez ${gameSettings.digits} chiffres valides !`);
             return;
         }
 
         if (!gameSettings.allowDuplicates && new Set(guessStr.split('')).size !== guessStr.length) {
-            setMessage('Pas de chiffres en double autorisés !');
+            setGuessError('Les doublons de chiffres ne sont pas autorisés selon les règles !');
             return;
         }
 
         socket.emit('submitGuess', { guess: guessStr, player: myPlayerId, sessionId });
         setMessage('En attente de la réponse...');
+        setGuessError('');
     };
 
     const copyRoomLink = () => {
@@ -399,29 +444,39 @@ function App() {
         }, 2000);
     };
 
-    const inputFields = (value, onChange, disabled, inputRef, size = "large") => {
+    const inputFields = (value, onChange, onKeyDown, disabled, inputRef, size = "large", error = '') => {
         const sizeClasses = size === "small"
             ? "w-8 h-8 text-sm"
             : size === "medium"
                 ? "w-10 h-10 text-lg"
                 : "w-14 h-14 text-2xl";
 
+        const disabledClasses = disabled
+            ? "bg-red-50 border-red-300 text-red-500"
+            : "bg-white border-purple-300 text-indigo-700";
+
         return (
-            <div className="flex justify-center gap-1">
-                {Array.from({ length: gameSettings.digits }, (_, i) => (
-                    <input
-                        key={i}
-                        ref={el => inputRef.current[i] = el}
-                        type="text"
-                        maxLength={1}
-                        value={value[i] || ''}
-                        onChange={(e) => onChange(e, i)}
-                        onPaste={(e) => { e.preventDefault(); }}
-                        disabled={disabled}
-                        className={`${sizeClasses} border-2 border-purple-300 rounded-xl font-bold text-center bg-white focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-400 text-indigo-700 transition-all duration-200 ${disabled ? 'bg-gray-100' : ''} hover:shadow-md`}
-                    />
-                ))}
-            </div>
+            <>
+                <div className="flex justify-center gap-1">
+                    {Array.from({ length: gameSettings.digits }, (_, i) => (
+                        <input
+                            key={i}
+                            ref={el => inputRef.current[i] = el}
+                            type="text"
+                            maxLength={1}
+                            value={value[i] || ''}
+                            onChange={(e) => onChange(e, i)}
+                            onKeyDown={(e) => onKeyDown(e, i)}
+                            onPaste={(e) => { e.preventDefault(); }}
+                            disabled={disabled}
+                            className={`${sizeClasses} border-2 rounded-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200 ${disabledClasses} hover:shadow-md`}
+                        />
+                    ))}
+                </div>
+                {error && (
+                    <p className="text-red-600 text-sm text-center mt-2 font-medium">{error}</p>
+                )}
+            </>
         );
     };
 
@@ -538,66 +593,72 @@ function App() {
             <h3 className="font-bold text-indigo-800 mb-4 text-lg flex items-center gap-2">
                 ⚙️ <span>Règles du jeu</span>
             </h3>
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <span className="text-purple-700 font-medium">Nombre de chiffres</span>
-                    <select
-                        value={gameSettings.digits}
-                        onChange={(e) => {
-                            const digits = parseInt(e.target.value);
-                            setGameSettings(prev => ({ ...prev, digits }));
-                            setPlayerSecret(Array(digits).fill(''));
-                            setGuess(Array(digits).fill(''));
-                            setCurrentNotepadEntry(Array(digits).fill(''));
-                        }}
-                        className="bg-white border border-purple-300 rounded-lg px-3 py-2 text-sm font-semibold"
-                        disabled={isDisabled}
-                    >
-                        <option value={3}>3 chiffres</option>
-                        <option value={4}>4 chiffres</option>
-                        <option value={5}>5 chiffres</option>
-                    </select>
+            <div className="space-y-6">
+                <div className="space-y-4">
+                    <h4 className="font-semibold text-purple-800 text-base">Paramètres principaux</h4>
+                    <div className="flex items-center justify-between">
+                        <span className="text-purple-700 font-medium">Nombre de chiffres dans le code secret</span>
+                        <select
+                            value={gameSettings.digits}
+                            onChange={(e) => {
+                                const digits = parseInt(e.target.value);
+                                setGameSettings(prev => ({ ...prev, digits }));
+                                setPlayerSecret(Array(digits).fill(''));
+                                setGuess(Array(digits).fill(''));
+                                setCurrentNotepadEntry(Array(digits).fill(''));
+                            }}
+                            className="bg-white border border-purple-300 rounded-lg px-3 py-2 text-sm font-semibold"
+                            disabled={isDisabled}
+                        >
+                            <option value={3}>3 chiffres</option>
+                            <option value={4}>4 chiffres</option>
+                            <option value={5}>5 chiffres</option>
+                        </select>
+                    </div>
+                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
+                        <span className="text-purple-700 font-medium">Autoriser les doublons de chiffres (même chiffre plusieurs fois)</span>
+                        <input
+                            type="checkbox"
+                            checked={gameSettings.allowDuplicates}
+                            onChange={(e) => setGameSettings(prev => ({ ...prev, allowDuplicates: e.target.checked }))}
+                            className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                            disabled={isDisabled}
+                        />
+                    </label>
                 </div>
-                <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                    <span className="text-purple-700 font-medium">Chiffres en double autorisés</span>
-                    <input
-                        type="checkbox"
-                        checked={gameSettings.allowDuplicates}
-                        onChange={(e) => setGameSettings(prev => ({ ...prev, allowDuplicates: e.target.checked }))}
-                        className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
-                        disabled={isDisabled}
-                    />
-                </label>
-                <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                    <span className="text-purple-700 font-medium">Afficher les mal placés</span>
-                    <input
-                        type="checkbox"
-                        checked={gameSettings.showMisplaced}
-                        onChange={(e) => setGameSettings(prev => ({ ...prev, showMisplaced: e.target.checked }))}
-                        className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
-                        disabled={isDisabled}
-                    />
-                </label>
-                <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                    <span className="text-purple-700 font-medium">Afficher les positions des bien placés</span>
-                    <input
-                        type="checkbox"
-                        checked={gameSettings.showWellPlacedDigits}
-                        onChange={(e) => setGameSettings(prev => ({ ...prev, showWellPlacedDigits: e.target.checked }))}
-                        className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
-                        disabled={isDisabled}
-                    />
-                </label>
-                <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                    <span className="text-purple-700 font-medium">Afficher les positions des mal placés</span>
-                    <input
-                        type="checkbox"
-                        checked={gameSettings.showMisplacedDigits}
-                        onChange={(e) => setGameSettings(prev => ({ ...prev, showMisplacedDigits: e.target.checked }))}
-                        className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
-                        disabled={isDisabled}
-                    />
-                </label>
+                <div className="space-y-4">
+                    <h4 className="font-semibold text-purple-800 text-base">Indicateurs de feedback</h4>
+                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
+                        <span className="text-purple-700 font-medium">Afficher le nombre total de chiffres mal placés (présents mais mauvaise position)</span>
+                        <input
+                            type="checkbox"
+                            checked={gameSettings.showMisplaced}
+                            onChange={(e) => setGameSettings(prev => ({ ...prev, showMisplaced: e.target.checked }))}
+                            className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                            disabled={isDisabled}
+                        />
+                    </label>
+                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
+                        <span className="text-purple-700 font-medium">Colorer les positions exactes des chiffres bien placés dans l'historique</span>
+                        <input
+                            type="checkbox"
+                            checked={gameSettings.showWellPlacedDigits}
+                            onChange={(e) => setGameSettings(prev => ({ ...prev, showWellPlacedDigits: e.target.checked }))}
+                            className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                            disabled={isDisabled}
+                        />
+                    </label>
+                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
+                        <span className="text-purple-700 font-medium">Colorer les positions des chiffres mal placés dans l'historique</span>
+                        <input
+                            type="checkbox"
+                            checked={gameSettings.showMisplacedDigits}
+                            onChange={(e) => setGameSettings(prev => ({ ...prev, showMisplacedDigits: e.target.checked }))}
+                            className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                            disabled={isDisabled}
+                        />
+                    </label>
+                </div>
                 {showUpdateButton && (
                     <button
                         onClick={updateGameSettings}
@@ -667,6 +728,7 @@ function App() {
                     <div className="max-w-md mx-auto mt-20 bg-white rounded-3xl p-8 shadow-xl border border-purple-200">
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-bold text-indigo-800 mb-3">Bienvenue !</h2>
+                            <p className="text-purple-600 text-lg mb-4">Chiffrio est un jeu multijoueur où vous devez deviner le code secret de votre adversaire avant qu'il ne devine le vôtre. À chaque tour, proposez une combinaison et recevez des indices : chiffres bien placés (en vert) et mal placés (en orange).</p>
                             <p className="text-purple-600 text-lg">Choisis ton pseudo pour commencer</p>
                         </div>
                         <input
@@ -776,28 +838,28 @@ function App() {
                                             ? 'bg-green-100 border-green-200 text-green-700'
                                             : 'bg-red-100 border-red-200 text-red-700'
                                     }`}>
-                                        {gameSettings.allowDuplicates ? '✓' : '✗'} Doublons
+                                        {gameSettings.allowDuplicates ? '✓' : '✗'} Doublons autorisés
                                     </span>
                                     <span className={`px-3 py-1 rounded-full border font-semibold ${
                                         gameSettings.showMisplaced
                                             ? 'bg-green-100 border-green-200 text-green-700'
                                             : 'bg-red-100 border-red-200 text-red-700'
                                     }`}>
-                                        {gameSettings.showMisplaced ? '✓' : '✗'} Mal placés
+                                        {gameSettings.showMisplaced ? '✓' : '✗'} Afficher mal placés
                                     </span>
                                     <span className={`px-3 py-1 rounded-full border font-semibold ${
                                         gameSettings.showWellPlacedDigits
                                             ? 'bg-green-100 border-green-200 text-green-700'
                                             : 'bg-red-100 border-red-200 text-red-700'
                                     }`}>
-                                        {gameSettings.showWellPlacedDigits ? '✓' : '✗'} Positions bien placés
+                                        {gameSettings.showWellPlacedDigits ? '✓' : '✗'} Colorer bien placés
                                     </span>
                                     <span className={`px-3 py-1 rounded-full border font-semibold ${
                                         gameSettings.showMisplacedDigits
                                             ? 'bg-green-100 border-green-200 text-green-700'
                                             : 'bg-red-100 border-red-200 text-red-700'
                                     }`}>
-                                        {gameSettings.showMisplacedDigits ? '✓' : '✗'} Positions mal placés
+                                        {gameSettings.showMisplacedDigits ? '✓' : '✗'} Colorer mal placés
                                     </span>
                                 </div>
                             </div>
@@ -806,7 +868,7 @@ function App() {
                             {myPlayerId !== 1 && renderGameSettings(false, true)}
 
                             <div className="mb-10 mt-10">
-                                {inputFields(playerSecret, handleSecretInputChange, false, secretInputs)}
+                                {inputFields(playerSecret, handleSecretInputChange, handleSecretInputKeyDown, false, secretInputs, 'large', secretError)}
                             </div>
                             <button
                                 onClick={handleSecretSubmit}
@@ -845,7 +907,7 @@ function App() {
 
                             <div className="bg-indigo-50 rounded-lg p-3 mb-4 border border-indigo-200">
                                 <div className="mb-2">
-                                    {inputFields(currentNotepadEntry, handleNotepadInputChange, false, notepadInputs, 'small')}
+                                    {inputFields(currentNotepadEntry, handleNotepadInputChange, handleNotepadInputKeyDown, false, notepadInputs, 'small', notepadError)}
                                 </div>
                                 <div className="flex gap-2">
                                     <button
@@ -953,7 +1015,7 @@ function App() {
                             </div>
 
                             <div className="mb-8">
-                                {inputFields(guess, handleGuessInputChange, !isMyTurn, guessInputs)}
+                                {inputFields(guess, handleGuessInputChange, handleGuessInputKeyDown, !isMyTurn, guessInputs, 'large', guessError)}
                             </div>
 
                             <button
