@@ -5,20 +5,20 @@ const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001');
 const BackgroundShapes = () => {
     return (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1]">
-            <svg className="absolute top-20 left-1/4 w-32 h-32 opacity-15" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1" className="text-indigo-400"/>
+            <svg className="absolute top-20 left-1/4 w-32 h-32 opacity-10" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1" className="text-amber-400"/>
             </svg>
-            <svg className="absolute bottom-40 right-1/3 w-24 h-24 opacity-15" viewBox="0 0 100 100">
-                <polygon points="50,10 90,90 10,90" fill="none" stroke="currentColor" strokeWidth="1" className="text-pink-400"/>
+            <svg className="absolute bottom-40 right-1/3 w-24 h-24 opacity-10" viewBox="0 0 100 100">
+                <polygon points="50,10 90,90 10,90" fill="none" stroke="currentColor" strokeWidth="1" className="text-rose-400"/>
             </svg>
-            <svg className="absolute top-1/3 right-1/4 w-28 h-28 opacity-15" viewBox="0 0 100 100">
+            <svg className="absolute top-1/3 right-1/4 w-28 h-28 opacity-10" viewBox="0 0 100 100">
                 <rect x="20" y="20" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="1" className="text-purple-400"/>
             </svg>
-            <svg className="absolute top-1/2 left-1/6 w-20 h-20 opacity-15" viewBox="0 0 100 100">
-                <polygon points="50,15 85,75 15,75" fill="none" stroke="currentColor" strokeWidth="1" className="text-green-400"/>
+            <svg className="absolute top-1/2 left-1/6 w-20 h-20 opacity-10" viewBox="0 0 100 100">
+                <polygon points="50,15 85,75 15,75" fill="none" stroke="currentColor" strokeWidth="1" className="text-emerald-400"/>
             </svg>
-            <svg className="absolute bottom-1/4 left-1/2 w-36 h-36 opacity-1" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="1" className="text-yellow-400"/>
+            <svg className="absolute bottom-1/4 left-1/2 w-36 h-36 opacity-20" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="1" className="text-amber-400"/>
             </svg>
         </div>
     );
@@ -453,7 +453,7 @@ function App() {
 
         const disabledClasses = disabled
             ? "bg-red-50 border-red-300 text-red-500"
-            : "bg-white border-purple-300 text-indigo-700";
+            : "bg-white border-amber-300 text-amber-800";
 
         return (
             <>
@@ -469,7 +469,7 @@ function App() {
                             onKeyDown={(e) => onKeyDown(e, i)}
                             onPaste={(e) => { e.preventDefault(); }}
                             disabled={disabled}
-                            className={`${sizeClasses} border-2 rounded-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200 ${disabledClasses} hover:shadow-md`}
+                            className={`${sizeClasses} border-2 rounded-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-400 transition-all duration-200 ${disabledClasses} hover:shadow-md`}
                         />
                     ))}
                 </div>
@@ -512,17 +512,17 @@ function App() {
                 {entries.map((entry, index) => (
                     <div
                         key={index}
-                        className="bg-white rounded-lg p-2 text-center border border-pink-200 hover:shadow-md transition-shadow"
+                        className="bg-white rounded-lg p-2 text-center border border-rose-200 hover:shadow-md transition-shadow"
                     >
-                        <div className="font-mono text-sm font-bold text-indigo-800 mb-1">
+                        <div className="font-mono text-sm font-bold text-amber-800 mb-1">
                             {entry.guess.split('').map((digit, i) => (
                                 <span
                                     key={i}
                                     className={
                                         entry.wellPlacedDigits.includes(i)
-                                            ? 'text-green-600'
+                                            ? 'text-emerald-600'
                                             : entry.misplacedDigits.includes(i)
-                                                ? 'text-orange-600'
+                                                ? 'text-amber-600'
                                                 : ''
                                     }
                                 >
@@ -531,11 +531,11 @@ function App() {
                             ))}
                         </div>
                         <div className="flex justify-center gap-1 text-xs">
-                            <span className="bg-green-200 text-green-800 px-1 py-0.5 rounded font-bold">
+                            <span className="bg-emerald-200 text-emerald-800 px-1 py-0.5 rounded font-bold">
                                 {entry.wellPlaced}
                             </span>
                             {gameSettings.showMisplaced && (
-                                <span className="bg-orange-200 text-orange-800 px-1 py-0.5 rounded font-bold">
+                                <span className="bg-amber-200 text-amber-800 px-1 py-0.5 rounded font-bold">
                                     {entry.misplaced}
                                 </span>
                             )}
@@ -552,18 +552,18 @@ function App() {
                 {entries.map((entry, index) => (
                     <div
                         key={index}
-                        className="bg-white p-3 rounded-xl border-l-4 border-pink-400"
+                        className="bg-white p-3 rounded-xl border-l-4 border-rose-400"
                     >
                         <div className="flex justify-between items-center">
-                            <span className="font-mono text-lg font-bold text-indigo-800 bg-white px-2 py-1 rounded-lg">
+                            <span className="font-mono text-lg font-bold text-amber-800 bg-white px-2 py-1 rounded-lg">
                                 {entry.guess.split('').map((digit, i) => (
                                     <span
                                         key={i}
                                         className={
                                             entry.wellPlacedDigits.includes(i)
-                                                ? 'text-green-600'
+                                                ? 'text-emerald-600'
                                                 : entry.misplacedDigits.includes(i)
-                                                    ? 'text-orange-600'
+                                                    ? 'text-amber-600'
                                                     : ''
                                         }
                                     >
@@ -572,11 +572,11 @@ function App() {
                                 ))}
                             </span>
                             <div className="flex gap-2">
-                                <span className="bg-green-200 text-green-800 px-2 py-1 rounded-lg text-sm font-bold">
+                                <span className="bg-emerald-200 text-emerald-800 px-2 py-1 rounded-lg text-sm font-bold">
                                     {entry.wellPlaced}
                                 </span>
                                 {gameSettings.showMisplaced && (
-                                    <span className="bg-orange-200 text-orange-800 px-2 py-1 rounded-lg text-sm font-bold">
+                                    <span className="bg-amber-200 text-amber-800 px-2 py-1 rounded-lg text-sm font-bold">
                                         {entry.misplaced}
                                     </span>
                                 )}
@@ -589,15 +589,15 @@ function App() {
     };
 
     const renderGameSettings = (showUpdateButton = false, isDisabled = false) => (
-        <div className="bg-white rounded-2xl p-6 border border-purple-200 mt-6">
-            <h3 className="font-bold text-indigo-800 mb-4 text-lg flex items-center gap-2">
+        <div className="bg-white rounded-2xl p-6 border border-beige-200 mt-6">
+            <h3 className="font-bold text-amber-800 mb-4 text-lg flex items-center gap-2">
                 ⚙️ <span>Règles du jeu</span>
             </h3>
             <div className="space-y-6">
                 <div className="space-y-4">
-                    <h4 className="font-semibold text-purple-800 text-base">Paramètres principaux</h4>
+                    <h4 className="font-semibold text-rose-800 text-base">Paramètres principaux</h4>
                     <div className="flex items-center justify-between">
-                        <span className="text-purple-700 font-medium">Nombre de chiffres dans le code secret</span>
+                        <span className="text-rose-700 font-medium">Nombre de chiffres dans le code secret</span>
                         <select
                             value={gameSettings.digits}
                             onChange={(e) => {
@@ -607,7 +607,7 @@ function App() {
                                 setGuess(Array(digits).fill(''));
                                 setCurrentNotepadEntry(Array(digits).fill(''));
                             }}
-                            className="bg-white border border-purple-300 rounded-lg px-3 py-2 text-sm font-semibold"
+                            className="bg-white border border-beige-300 rounded-lg px-3 py-2 text-sm font-semibold"
                             disabled={isDisabled}
                         >
                             <option value={3}>3 chiffres</option>
@@ -615,46 +615,46 @@ function App() {
                             <option value={5}>5 chiffres</option>
                         </select>
                     </div>
-                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                        <span className="text-purple-700 font-medium">Autoriser les doublons de chiffres (même chiffre plusieurs fois)</span>
+                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-beige-200 cursor-pointer">
+                        <span className="text-rose-700 font-medium">Autoriser les doublons de chiffres (même chiffre plusieurs fois)</span>
                         <input
                             type="checkbox"
                             checked={gameSettings.allowDuplicates}
                             onChange={(e) => setGameSettings(prev => ({ ...prev, allowDuplicates: e.target.checked }))}
-                            className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                            className="w-5 h-5 rounded text-rose-600 focus:ring-rose-500"
                             disabled={isDisabled}
                         />
                     </label>
                 </div>
                 <div className="space-y-4">
-                    <h4 className="font-semibold text-purple-800 text-base">Indicateurs de feedback</h4>
-                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                        <span className="text-purple-700 font-medium">Afficher le nombre total de chiffres mal placés (présents mais mauvaise position)</span>
+                    <h4 className="font-semibold text-rose-800 text-base">Indicateurs de feedback</h4>
+                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-beige-200 cursor-pointer">
+                        <span className="text-rose-700 font-medium">Afficher le nombre total de chiffres mal placés (présents mais mauvaise position)</span>
                         <input
                             type="checkbox"
                             checked={gameSettings.showMisplaced}
                             onChange={(e) => setGameSettings(prev => ({ ...prev, showMisplaced: e.target.checked }))}
-                            className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                            className="w-5 h-5 rounded text-rose-600 focus:ring-rose-500"
                             disabled={isDisabled}
                         />
                     </label>
-                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                        <span className="text-purple-700 font-medium">Colorer les positions exactes des chiffres bien placés dans l'historique</span>
+                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-beige-200 cursor-pointer">
+                        <span className="text-rose-700 font-medium">Colorer les positions exactes des chiffres bien placés dans l'historique</span>
                         <input
                             type="checkbox"
                             checked={gameSettings.showWellPlacedDigits}
                             onChange={(e) => setGameSettings(prev => ({ ...prev, showWellPlacedDigits: e.target.checked }))}
-                            className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                            className="w-5 h-5 rounded text-rose-600 focus:ring-rose-500"
                             disabled={isDisabled}
                         />
                     </label>
-                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200 cursor-pointer">
-                        <span className="text-purple-700 font-medium">Colorer les positions des chiffres mal placés dans l'historique</span>
+                    <label className="flex items-center justify-between bg-white rounded-lg p-3 border border-beige-200 cursor-pointer">
+                        <span className="text-rose-700 font-medium">Colorer les positions des chiffres mal placés dans l'historique</span>
                         <input
                             type="checkbox"
                             checked={gameSettings.showMisplacedDigits}
                             onChange={(e) => setGameSettings(prev => ({ ...prev, showMisplacedDigits: e.target.checked }))}
-                            className="w-5 h-5 rounded text-pink-600 focus:ring-pink-500"
+                            className="w-5 h-5 rounded text-rose-600 focus:ring-rose-500"
                             disabled={isDisabled}
                         />
                     </label>
@@ -662,7 +662,7 @@ function App() {
                 {showUpdateButton && (
                     <button
                         onClick={updateGameSettings}
-                        className={`w-full bg-pink-600 text-white p-3 rounded-xl text-lg font-bold hover:bg-pink-700 transition-all duration-300 shadow-lg ${hasUnsavedChanges ? 'animate-pulse' : ''}`}
+                        className={`w-full bg-rose-600 text-white p-3 rounded-xl text-lg font-bold hover:bg-rose-700 transition-all duration-300 shadow-lg ${hasUnsavedChanges ? 'animate-pulse' : ''}`}
                     >
                         Mettre à jour les règles
                     </button>
@@ -672,43 +672,47 @@ function App() {
     );
 
     return (
-        <div className="min-h-screen bg-indigo-50 font-sans">
+        <div className="min-h-screen bg-beige-50 font-league-spartan">
             <BackgroundShapes />
 
             {reconnecting && (
-                <div className="fixed top-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
+                <div className="fixed top-4 right-4 bg-amber-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
                     Reconnexion en cours...
                 </div>
             )}
 
-            <header className="bg-white shadow-lg border-b border-purple-200 p-4 top-0 z-10 relative">
+            <header className="bg-white shadow-lg border-b border-beige-200 p-4 top-0 z-10 relative">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-pink-600 rounded-full flex items-center justify-center">
-                                <span className="text-white font-bold text-xl">🔢</span>
+                            <div className="w-10 h-10 bg-rose-600 rounded-full flex items-center justify-center">
+                                <img
+                                    src="/logo_mastermind.png"
+                                    alt="Chiffrio Logo"
+                                    className="w-10 h-10 rounded-full shadow-doodle animate-subtle-bounce"
+                                />
                             </div>
-                            <h1 className="text-3xl font-bold text-indigo-600">
+                            <h1 className="text-3xl font-bold text-amber-600">
                                 Chiffrio
                             </h1>
                         </div>
                         {roomId && (
-                            <div className="bg-indigo-100 px-4 py-2 rounded-full border border-purple-200">
-                                <span className="text-sm font-semibold text-purple-700">Room: {roomId}</span>
+                            <div className="bg-beige-100 px-4 py-2 rounded-full border border-beige-200">
+                                <span className="text-sm font-semibold text-rose-700">Room: {roomId}</span>
                             </div>
                         )}
                     </div>
                     {(gameState === 'playing' || gameState === 'setup') && (
                         <div className="flex items-center gap-4">
-                            <div className="text-right bg-purple-50 px-3 py-2 rounded-lg border border-purple-200">
-                                <div className="text-xs text-purple-500 font-medium">Ton secret</div>
-                                <div className="text-lg font-mono font-bold text-indigo-800">
+                            <div className="text-right bg-beige-50 px-3 py-2 rounded-lg border border-beige-200">
+                                <div className="text-xs text-rose-500 font-medium">Ton secret</div>
+                                <div className="text-lg font-mono font-bold text-amber-800">
                                     {playerSecret.join('') || Array(gameSettings.digits).fill('-').join('')}
                                 </div>
                             </div>
                             <button
                                 onClick={handleRestart}
-                                className="bg-orange-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-orange-700 transition-all duration-300 shadow-lg"
+                                className="bg-amber-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-amber-700 transition-all duration-300 shadow-lg"
                             >
                                 🔄 Relancer
                             </button>
@@ -717,7 +721,7 @@ function App() {
                 </div>
             </header>
 
-            <div className="bg-indigo-600 text-white p-4 relative z-10">
+            <div className="bg-amber-600 text-white p-4 relative z-10">
                 <div className="max-w-7xl mx-auto text-center">
                     <p className="font-semibold text-lg">{message}</p>
                 </div>
@@ -725,18 +729,18 @@ function App() {
 
             <div className="max-w-7xl mx-auto p-6 relative z-10">
                 {gameState === 'home' && (
-                    <div className="max-w-md mx-auto mt-20 bg-white rounded-3xl p-8 shadow-xl border border-purple-200">
+                    <div className="max-w-md mx-auto mt-20 bg-white rounded-3xl p-8 shadow-xl border border-beige-200">
                         <div className="text-center mb-8">
-                            <h2 className="text-3xl font-bold text-indigo-800 mb-3">Bienvenue !</h2>
-                            <p className="text-purple-600 text-lg mb-4">Chiffrio est un jeu multijoueur où vous devez deviner le code secret de votre adversaire avant qu'il ne devine le vôtre. À chaque tour, proposez une combinaison et recevez des indices : chiffres bien placés (en vert) et mal placés (en orange).</p>
-                            <p className="text-purple-600 text-lg">Choisis ton pseudo pour commencer</p>
+                            <h2 className="text-3xl font-bold text-amber-800 mb-3">Bienvenue !</h2>
+                            <p className="text-rose-600 text-lg mb-4">Chiffrio est un jeu multijoueur où vous devez deviner le code secret de votre adversaire avant qu'il ne devine le vôtre. À chaque tour, proposez une combinaison et recevez des indices : chiffres bien placés (en vert) et mal placés (en orange).</p>
+                            <p className="text-rose-600 text-lg">Choisis ton pseudo pour commencer</p>
                         </div>
                         <input
                             type="text"
                             value={pseudo}
                             onChange={(e) => setPseudo(e.target.value)}
                             placeholder="Ton pseudo..."
-                            className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-400 text-lg font-medium transition-all"
+                            className="w-full p-4 border-2 border-beige-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-400 text-lg font-medium transition-all"
                         />
                         <div className="grid grid-cols-2 gap-4 mt-6">
                             <button
@@ -744,7 +748,7 @@ function App() {
                                     if (pseudo.trim() && pseudo.trim().length >= 2) setGameState('createSettings');
                                     else setMessage('Choisis un pseudo valide (au moins 2 caractères) !');
                                 }}
-                                className="bg-pink-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-pink-700 transition-all duration-300 shadow-lg"
+                                className="bg-rose-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-rose-700 transition-all duration-300 shadow-lg"
                             >
                                 Créer une partie
                             </button>
@@ -753,7 +757,7 @@ function App() {
                                     if (pseudo.trim() && pseudo.trim().length >= 2) setGameState('joinInput');
                                     else setMessage('Choisis un pseudo valide (au moins 2 caractères) !');
                                 }}
-                                className="bg-indigo-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-indigo-700 transition-all duration-300 shadow-lg"
+                                className="bg-amber-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-amber-700 transition-all duration-300 shadow-lg"
                             >
                                 Rejoindre
                             </button>
@@ -762,15 +766,15 @@ function App() {
                 )}
 
                 {gameState === 'createSettings' && (
-                    <div className="max-w-md mx-auto mt-20 bg-white rounded-3xl p-8 shadow-xl border border-purple-200">
+                    <div className="max-w-md mx-auto mt-20 bg-white rounded-3xl p-8 shadow-xl border border-beige-200">
                         <div className="text-center mb-8">
-                            <h2 className="text-3xl font-bold text-indigo-800 mb-3">Configurer la partie</h2>
-                            <p className="text-purple-600 text-lg">Choisis les règles du jeu</p>
+                            <h2 className="text-3xl font-bold text-amber-800 mb-3">Configurer la partie</h2>
+                            <p className="text-rose-600 text-lg">Choisis les règles du jeu</p>
                         </div>
                         {renderGameSettings(false, false)}
                         <button
                             onClick={createRoom}
-                            className="w-full bg-pink-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-pink-700 transition-all duration-300 shadow-lg mt-6"
+                            className="w-full bg-rose-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-rose-700 transition-all duration-300 shadow-lg mt-6"
                         >
                             Créer la partie
                         </button>
@@ -778,22 +782,22 @@ function App() {
                 )}
 
                 {gameState === 'joinInput' && (
-                    <div className="max-w-md mx-auto mt-20 bg-white rounded-3xl p-8 shadow-xl border border-purple-200">
+                    <div className="max-w-md mx-auto mt-20 bg-white rounded-3xl p-8 shadow-xl border border-beige-200">
                         <div className="text-center mb-8">
-                            <h2 className="text-3xl font-bold text-indigo-800 mb-3">Rejoindre une partie</h2>
-                            <p className="text-purple-600 text-lg">Entre le code de la salle</p>
+                            <h2 className="text-3xl font-bold text-amber-800 mb-3">Rejoindre une partie</h2>
+                            <p className="text-rose-600 text-lg">Entre le code de la salle</p>
                         </div>
                         <input
                             type="text"
                             value={roomId}
                             onChange={(e) => setRoomId(e.target.value.toUpperCase())}
                             placeholder="Code de la salle..."
-                            className="w-full p-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 text-center font-mono text-xl font-bold tracking-wider transition-all"
+                            className="w-full p-4 border-2 border-beige-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-center font-mono text-xl font-bold tracking-wider transition-all"
                             maxLength={6}
                         />
                         <button
                             onClick={joinRoom}
-                            className="w-full bg-indigo-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-indigo-700 transition-all duration-300 shadow-lg mt-6"
+                            className="w-full bg-amber-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-amber-700 transition-all duration-300 shadow-lg mt-6"
                         >
                             Rejoindre
                         </button>
@@ -802,17 +806,17 @@ function App() {
 
                 {gameState === 'hosting' && (
                     <div className="flex justify-center mt-12">
-                        <div className="bg-white rounded-3xl p-12 shadow-2xl text-center max-w-md border border-purple-200">
+                        <div className="bg-white rounded-3xl p-12 shadow-2xl text-center max-w-md border border-beige-200">
                             <div className="text-8xl mb-6 animate-pulse">⏳</div>
-                            <h2 className="text-3xl font-bold text-indigo-800 mb-6">Salle créée !</h2>
-                            <div className="bg-indigo-100 rounded-2xl p-6 mb-8 border border-purple-200">
-                                <p className="text-sm text-purple-700 mb-2 font-semibold">Code de la salle</p>
-                                <p className="text-4xl font-bold text-indigo-800 tracking-wider font-mono">{roomId}</p>
+                            <h2 className="text-3xl font-bold text-amber-800 mb-6">Salle créée !</h2>
+                            <div className="bg-beige-100 rounded-2xl p-6 mb-8 border border-beige-200">
+                                <p className="text-sm text-rose-700 mb-2 font-semibold">Code de la salle</p>
+                                <p className="text-4xl font-bold text-amber-800 tracking-wider font-mono">{roomId}</p>
                             </div>
                             {renderGameSettings(true, false)}
                             <button
                                 onClick={copyRoomLink}
-                                className="bg-pink-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-pink-700 transition-all duration-300 shadow-lg mt-6"
+                                className="bg-rose-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-rose-700 transition-all duration-300 shadow-lg mt-6"
                             >
                                 📋 Copier le lien
                             </button>
@@ -822,41 +826,41 @@ function App() {
 
                 {gameState === 'setup' && (
                     <div className="max-w-3xl mx-auto mt-8">
-                        <div className="bg-white rounded-3xl p-12 shadow-2xl text-center border border-purple-200">
-                            <h2 className="text-4xl font-bold text-indigo-800 mb-4">🤫 Choisis ton nombre secret</h2>
-                            <p className="text-purple-600 mb-2 text-lg">
+                        <div className="bg-white rounded-3xl p-12 shadow-2xl text-center border border-beige-200">
+                            <h2 className="text-4xl font-bold text-amber-800 mb-4">🤫 Choisis ton nombre secret</h2>
+                            <p className="text-rose-600 mb-2 text-lg">
                                 {getOpponentName() ? `${getOpponentName()} attend ta décision...` : 'En attente de l\'autre joueur...'}
                             </p>
 
-                            <div className="bg-indigo-50 rounded-2xl p-4 mb-8 border border-pink-100">
+                            <div className="bg-beige-50 rounded-2xl p-4 mb-8 border border-rose-100">
                                 <div className="flex flex-wrap justify-center gap-4 text-sm">
-                                    <span className="bg-white px-3 py-1 rounded-full border border-pink-200 text-pink-700 font-semibold">
+                                    <span className="bg-white px-3 py-1 rounded-full border border-rose-200 text-rose-700 font-semibold">
                                         {gameSettings.digits} chiffres
                                     </span>
                                     <span className={`px-3 py-1 rounded-full border font-semibold ${
                                         gameSettings.allowDuplicates
-                                            ? 'bg-green-100 border-green-200 text-green-700'
+                                            ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
                                             : 'bg-red-100 border-red-200 text-red-700'
                                     }`}>
                                         {gameSettings.allowDuplicates ? '✓' : '✗'} Doublons autorisés
                                     </span>
                                     <span className={`px-3 py-1 rounded-full border font-semibold ${
                                         gameSettings.showMisplaced
-                                            ? 'bg-green-100 border-green-200 text-green-700'
+                                            ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
                                             : 'bg-red-100 border-red-200 text-red-700'
                                     }`}>
                                         {gameSettings.showMisplaced ? '✓' : '✗'} Afficher mal placés
                                     </span>
                                     <span className={`px-3 py-1 rounded-full border font-semibold ${
                                         gameSettings.showWellPlacedDigits
-                                            ? 'bg-green-100 border-green-200 text-green-700'
+                                            ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
                                             : 'bg-red-100 border-red-200 text-red-700'
                                     }`}>
                                         {gameSettings.showWellPlacedDigits ? '✓' : '✗'} Colorer bien placés
                                     </span>
                                     <span className={`px-3 py-1 rounded-full border font-semibold ${
                                         gameSettings.showMisplacedDigits
-                                            ? 'bg-green-100 border-green-200 text-green-700'
+                                            ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
                                             : 'bg-red-100 border-red-200 text-red-700'
                                     }`}>
                                         {gameSettings.showMisplacedDigits ? '✓' : '✗'} Colorer mal placés
@@ -876,13 +880,13 @@ function App() {
                                 className={`px-12 py-4 rounded-xl text-xl font-bold transition-all duration-300 shadow-lg ${
                                     imReady
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-pink-600 text-white hover:bg-pink-700'
+                                        : 'bg-rose-600 text-white hover:bg-rose-700'
                                 }`}
                             >
                                 {imReady ? '✅ Nombre validé' : '🔒 Valider mon secret'}
                             </button>
                             {imReady && (
-                                <p className="text-sm text-purple-500 mt-6 animate-pulse">
+                                <p className="text-sm text-rose-500 mt-6 animate-pulse">
                                     En attente de {getOpponentName()}...
                                 </p>
                             )}
@@ -892,9 +896,9 @@ function App() {
 
                 {gameState === 'playing' && (
                     <div className="grid grid-cols-5 gap-6 mt-6">
-                        <div className="col-span-1 bg-white rounded-3xl p-6 shadow-xl border border-indigo-200">
+                        <div className="col-span-1 bg-white rounded-3xl p-6 shadow-xl border border-amber-200">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-bold text-lg text-indigo-800 flex items-center gap-2">
+                                <h3 className="font-bold text-lg text-amber-800 flex items-center gap-2">
                                     📝 <span>Bloc-notes</span>
                                 </h3>
                                 <button
@@ -905,7 +909,7 @@ function App() {
                                 </button>
                             </div>
 
-                            <div className="bg-indigo-50 rounded-lg p-3 mb-4 border border-indigo-200">
+                            <div className="bg-beige-50 rounded-lg p-3 mb-4 border border-amber-200">
                                 <div className="mb-2">
                                     {inputFields(currentNotepadEntry, handleNotepadInputChange, handleNotepadInputKeyDown, false, notepadInputs, 'small', notepadError)}
                                 </div>
@@ -913,13 +917,13 @@ function App() {
                                     <button
                                         onClick={addNotepadEntry}
                                         disabled={currentNotepadEntry.join('').length !== gameSettings.digits}
-                                        className="flex-1 text-xs bg-green-100 hover:bg-green-200 disabled:bg-gray-100 text-green-700 disabled:text-gray-400 px-2 py-1.5 rounded font-medium transition-colors"
+                                        className="flex-1 text-xs bg-emerald-100 hover:bg-emerald-200 disabled:bg-gray-100 text-emerald-700 disabled:text-gray-400 px-2 py-1.5 rounded font-medium transition-colors"
                                     >
                                         + Ajouter
                                     </button>
                                     <button
                                         onClick={clearNotepad}
-                                        className="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-600 px-2 py-1.5 rounded font-medium transition-colors"
+                                        className="text-xs bg-amber-100 hover:bg-amber-200 text-amber-600 px-2 py-1.5 rounded font-medium transition-colors"
                                     >
                                         Effacer
                                     </button>
@@ -928,14 +932,14 @@ function App() {
 
                             <div className="space-y-2 max-h-[calc(100vh-500px)] overflow-y-auto">
                                 {notepadEntries.length === 0 ? (
-                                    <p className="text-sm text-indigo-500 italic text-center py-4">
+                                    <p className="text-sm text-amber-500 italic text-center py-4">
                                         Aucune combinaison testée
                                     </p>
                                 ) : (
                                     notepadEntries.map((entry) => (
-                                        <div key={entry.id} className="bg-white border border-indigo-200 rounded-lg p-2 shadow-sm">
+                                        <div key={entry.id} className="bg-white border border-amber-200 rounded-lg p-2 shadow-sm">
                                             <div className="flex items-center justify-between mb-1">
-                                                <span className="font-mono text-sm font-bold text-indigo-800">
+                                                <span className="font-mono text-sm font-bold text-amber-800">
                                                     {entry.combination}
                                                 </span>
                                                 <button
@@ -950,15 +954,15 @@ function App() {
                                                 value={entry.notes}
                                                 onChange={(e) => updateNotepadEntry(entry.id, e.target.value)}
                                                 placeholder="Notes..."
-                                                className="w-full text-xs p-1 border border-indigo-200 rounded focus:outline-none focus:ring-1 focus:ring-pink-400"
+                                                className="w-full text-xs p-1 border border-amber-200 rounded focus:outline-none focus:ring-1 focus:ring-rose-400"
                                             />
                                         </div>
                                     ))
                                 )}
                             </div>
 
-                            <div className="mt-6 pt-4 border-t border-indigo-200">
-                                <h3 className="font-bold text-lg text-indigo-800 mb-2 flex items-center gap-2">
+                            <div className="mt-6 pt-4 border-t border-amber-200">
+                                <h3 className="font-bold text-lg text-amber-800 mb-2 flex items-center gap-2">
                                     ❌ <span>Chiffres éliminés</span>
                                 </h3>
                                 <div className="grid grid-cols-5 gap-2">
@@ -969,7 +973,7 @@ function App() {
                                             className={`w-full h-10 rounded-lg font-bold text-lg transition-colors ${
                                                 eliminatedDigits.has(d)
                                                     ? 'bg-red-500 text-white line-through hover:bg-red-600'
-                                                    : 'bg-white text-indigo-800 border border-indigo-300 hover:bg-indigo-50'
+                                                    : 'bg-white text-amber-800 border border-amber-300 hover:bg-amber-50'
                                             }`}
                                         >
                                             {d}
@@ -979,36 +983,36 @@ function App() {
                             </div>
                         </div>
 
-                        <div className="col-span-2 bg-white rounded-3xl p-8 shadow-xl border border-purple-200">
+                        <div className="col-span-2 bg-white rounded-3xl p-8 shadow-xl border border-beige-200">
                             <div className="text-center mb-8">
-                                <h2 className="text-2xl font-bold text-indigo-800 mb-4">
+                                <h2 className="text-2xl font-bold text-amber-800 mb-4">
                                     {isMyTurn ? `🎯 À ton tour !` : `⏳ Tour de ${getOpponentName()}`}
                                 </h2>
 
                                 <div className="flex justify-center items-center gap-6 mb-6">
                                     <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
                                         currentPlayer === 1
-                                            ? 'bg-pink-100 border-2 border-pink-400 shadow-md'
-                                            : 'bg-purple-100 border border-purple-300'
+                                            ? 'bg-rose-100 border-2 border-rose-400 shadow-md'
+                                            : 'bg-beige-100 border border-beige-300'
                                     }`}>
                                         <div className={`w-3 h-3 rounded-full ${
-                                            currentPlayer === 1 ? 'bg-pink-500 animate-pulse' : 'bg-gray-400'
+                                            currentPlayer === 1 ? 'bg-rose-500 animate-pulse' : 'bg-gray-400'
                                         }`}></div>
                                         <span className={`font-semibold ${
-                                            currentPlayer === 1 ? 'text-pink-700' : 'text-purple-600'
+                                            currentPlayer === 1 ? 'text-rose-700' : 'text-rose-600'
                                         }`}>{players.player1}</span>
                                     </div>
-                                    <span className="text-purple-400 font-bold">VS</span>
+                                    <span className="text-rose-400 font-bold">VS</span>
                                     <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
                                         currentPlayer === 2
-                                            ? 'bg-indigo-100 border-2 border-indigo-400 shadow-md'
-                                            : 'bg-purple-100 border border-purple-300'
+                                            ? 'bg-amber-100 border-2 border-amber-400 shadow-md'
+                                            : 'bg-beige-100 border border-beige-300'
                                     }`}>
                                         <div className={`w-3 h-3 rounded-full ${
-                                            currentPlayer === 2 ? 'bg-indigo-500 animate-pulse' : 'bg-gray-400'
+                                            currentPlayer === 2 ? 'bg-amber-500 animate-pulse' : 'bg-gray-400'
                                         }`}></div>
                                         <span className={`font-semibold ${
-                                            currentPlayer === 2 ? 'text-indigo-700' : 'text-purple-600'
+                                            currentPlayer === 2 ? 'text-amber-700' : 'text-rose-600'
                                         }`}>{players.player2}</span>
                                     </div>
                                 </div>
@@ -1024,16 +1028,16 @@ function App() {
                                 className={`w-full p-4 rounded-xl text-xl font-bold transition-all duration-300 shadow-lg ${
                                     !isMyTurn
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-pink-600 text-white hover:bg-pink-700'
+                                        : 'bg-rose-600 text-white hover:bg-rose-700'
                                 }`}
                             >
                                 🚀 Proposer ma combinaison
                             </button>
                         </div>
 
-                        <div className="col-span-2 bg-white rounded-3xl p-6 shadow-xl border border-pink-200">
+                        <div className="col-span-2 bg-white rounded-3xl p-6 shadow-xl border border-rose-200">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xl font-bold text-pink-800 flex items-center gap-2">
+                                <h3 className="text-xl font-bold text-rose-800 flex items-center gap-2">
                                     📊 <span>Mon historique</span>
                                 </h3>
                                 <div className="flex gap-2">
@@ -1041,7 +1045,7 @@ function App() {
                                         onClick={() => setHistoryViewMode(historyViewMode === 'grid' ? 'list' : 'grid')}
                                         className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
                                             historyViewMode === 'grid'
-                                                ? 'bg-pink-200 text-pink-800'
+                                                ? 'bg-rose-200 text-rose-800'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         }`}
                                     >
@@ -1050,7 +1054,7 @@ function App() {
                                     <select
                                         value={historySortMode}
                                         onChange={(e) => setHistorySortMode(e.target.value)}
-                                        className="text-xs bg-white border border-pink-300 rounded px-2 py-1 font-medium"
+                                        className="text-xs bg-white border border-rose-300 rounded px-2 py-1 font-medium"
                                     >
                                         <option value="recent">Récent</option>
                                         <option value="closest">Plus proche</option>
@@ -1063,7 +1067,7 @@ function App() {
                                 {history.filter(h => h.player === myPlayerId).length === 0 ? (
                                     <div className="text-center py-8">
                                         <div className="text-5xl mb-4 opacity-50">🤔</div>
-                                        <p className="text-pink-500 text-lg">Aucune proposition pour l'instant...</p>
+                                        <p className="text-rose-500 text-lg">Aucune proposition pour l'instant...</p>
                                     </div>
                                 ) : (
                                     <div>
@@ -1076,22 +1080,22 @@ function App() {
                             </div>
 
                             <div className="mt-6 pt-4 border-t border-gray-200">
-                                <h4 className="font-bold text-green-800 mb-3 text-center flex items-center justify-center gap-2">
+                                <h4 className="font-bold text-emerald-800 mb-3 text-center flex items-center justify-center gap-2">
                                     <span className="text-sm">👁️ {getOpponentName() || 'Adversaire'}</span>
                                 </h4>
                                 <div className="max-h-32 overflow-y-auto">
                                     <div className="grid grid-cols-4 gap-1">
                                         {history.filter(h => h.player !== myPlayerId).slice(-16).map((entry, index) => (
-                                            <div key={index} className="bg-white rounded-lg p-1 text-center border border-green-200">
-                                                <div className="font-mono text-xs font-bold text-green-800">
+                                            <div key={index} className="bg-white rounded-lg p-1 text-center border border-emerald-200">
+                                                <div className="font-mono text-xs font-bold text-emerald-800">
                                                     {entry.guess.split('').map((digit, i) => (
                                                         <span
                                                             key={i}
                                                             className={
                                                                 entry.wellPlacedDigits.includes(i)
-                                                                    ? 'text-green-600'
+                                                                    ? 'text-emerald-600'
                                                                     : entry.misplacedDigits.includes(i)
-                                                                        ? 'text-orange-600'
+                                                                        ? 'text-amber-600'
                                                                         : ''
                                                             }
                                                         >
@@ -1100,11 +1104,11 @@ function App() {
                                                     ))}
                                                 </div>
                                                 <div className="flex justify-center gap-1 text-xs">
-                                                    <span className="bg-green-300 text-green-800 px-1 rounded text-xs font-bold">
+                                                    <span className="bg-emerald-300 text-emerald-800 px-1 rounded text-xs font-bold">
                                                         {entry.wellPlaced}
                                                     </span>
                                                     {gameSettings.showMisplaced && (
-                                                        <span className="bg-orange-300 text-orange-800 px-1 rounded text-xs font-bold">
+                                                        <span className="bg-amber-300 text-amber-800 px-1 rounded text-xs font-bold">
                                                             {entry.misplaced}
                                                         </span>
                                                     )}
@@ -1120,24 +1124,24 @@ function App() {
 
                 {gameState === 'won' && (
                     <div className="flex justify-center mt-12">
-                        <div className="bg-white rounded-3xl p-16 shadow-2xl text-center max-w-lg border border-purple-200">
+                        <div className="bg-white rounded-3xl p-16 shadow-2xl text-center max-w-lg border border-beige-200">
                             <div className="text-9xl mb-8 animate-bounce">🏆</div>
-                            <h2 className="text-4xl font-bold text-indigo-600 mb-8">
+                            <h2 className="text-4xl font-bold text-amber-600 mb-8">
                                 Partie terminée !
                             </h2>
-                            <div className="bg-indigo-50 rounded-2xl p-6 mb-8 border border-pink-200">
-                                <p className="text-purple-700 text-lg">Félicitations pour cette belle partie ! 🎉</p>
+                            <div className="bg-beige-50 rounded-2xl p-6 mb-8 border border-rose-200">
+                                <p className="text-rose-700 text-lg">Félicitations pour cette belle partie ! 🎉</p>
                             </div>
                             <div className="flex gap-4">
                                 <button
                                     onClick={handleRestart}
-                                    className="flex-1 bg-orange-600 text-white px-8 py-4 rounded-xl text-xl font-bold hover:bg-orange-700 transition-all duration-300 shadow-lg"
+                                    className="flex-1 bg-amber-600 text-white px-8 py-4 rounded-xl text-xl font-bold hover:bg-amber-700 transition-all duration-300 shadow-lg"
                                 >
                                     🔄 Relancer
                                 </button>
                                 <button
                                     onClick={() => window.location.reload()}
-                                    className="flex-1 bg-pink-600 text-white px-8 py-4 rounded-xl text-xl font-bold hover:bg-pink-700 transition-all duration-300 shadow-lg"
+                                    className="flex-1 bg-rose-600 text-white px-8 py-4 rounded-xl text-xl font-bold hover:bg-rose-700 transition-all duration-300 shadow-lg"
                                 >
                                     🔙 Retour au lobby
                                 </button>

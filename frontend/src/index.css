@@ -1,5 +1,76 @@
+/* index.css */
+@import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;400;500;600;700;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/*commentaire de test pour degug/* force rebuild */
+body {
+    margin: 0;
+    font-family: 'League Spartan', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #fef7e0; /* Beige background */
+}
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+/* Custom styles for improved aesthetics */
+.shadow-doodle {
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    transition: all 0.3s ease;
+}
+
+.animate-subtle-bounce {
+    animation: subtle-bounce 2s infinite;
+}
+
+@keyframes subtle-bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-5px); }
+    60% { transform: translateY(-3px); }
+}
+
+/* Enhanced input focus ring */
+input:focus {
+    box-shadow: 0 0 0 3px rgba(245, 158, 158, 0.5);
+}
+
+/* Smooth scroll for overflow sections */
+.overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Beige theme adjustments */
+.bg-beige-50 { background-color: #fef7e0; }
+.bg-beige-100 { background-color: #fdf4e3; }
+.bg-beige-200 { background-color: #fcefd6; }
+.text-beige-700 { color: #a67c00; }
+.border-beige-200 { border-color: #f5e8c7; }
+
+/* Improved button hover effects */
+button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 7px 14px rgba(0, 0, 0, 0.1);
+}
