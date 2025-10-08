@@ -665,7 +665,8 @@ function App() {
             <header className="bg-white p-4 top-0 z-10 relative border-b-4 border-text-color shadow-sketchy">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <img src="../public/logo_mastermind.png" alt="Logo Chiffrio" className="h-16 w-16 object-cover border-2 border-text-color rounded-md" />
+                        <img src="/logo_mastermind.png" alt="Logo Chiffrio"
+                             className="h-16 w-16 object-cover border-2 border-text-color rounded-md" />
                         <h1 className="text-5xl font-black text-text-color">Chiffrio</h1>
                         {roomId && (
                             <div className="bg-[var(--accent-color)] px-4 py-2 rounded-lg border-2 border-text-color">
