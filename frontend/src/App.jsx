@@ -1,9 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import {
+    FaGamepad, FaTrophy, FaHistory, FaClock, FaCheck, FaLock,
+    FaPlus, FaTrash, FaTimes, FaPencilAlt, FaLink, FaCog,
+    FaThLarge, FaList, FaBullseye, FaStickyNote, FaRedo, FaPlusCircle
+} from 'react-icons/fa';
 
-const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001');
+const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001', {
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 5
+});
 
-// DoodleMathShapes component for the background
 const DoodleMathShapes = () => (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1] text-primary-color opacity-20">
         <span className="absolute top-[10%] left-[5%] text-7xl font-mono rotate-12">13</span>
@@ -16,96 +24,6 @@ const DoodleMathShapes = () => (
     </div>
 );
 
-// SVG Icons
-const ICONS = {
-    Grid: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1" />
-            <rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" />
-            <rect x="14" y="14" width="7" height="7" rx="1" />
-        </svg>
-    ),
-    List: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-    ),
-    Settings: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.92l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2.92l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-            <circle cx="12" cy="12" r="3" />
-        </svg>
-    ),
-    Trophy: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M9 22h6m-3-3v3M6 11.5c1.5 2.5 5.5 5.5 6 5.5s4.5-3 6-5.5V9A6 6 0 0 0 6 9v2.5z" />
-        </svg>
-    ),
-    Notepad: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M13.5 2H6.5A2.5 2.5 0 0 0 4 4.5v15A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5v-11L13.5 2z" />
-            <path d="M13 2v6h6" />
-        </svg>
-    ),
-    History: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 6v6l4 2" />
-        </svg>
-    ),
-    Link: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07L13 7.07m-3 4.93L3 14.93a5 5 0 0 0 7.07 7.07l3-3a5 5 0 0 0-7.54-.54Z" />
-        </svg>
-    ),
-    Check: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 6 9 17l-5-5" />
-        </svg>
-    ),
-    Lock: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
-    ),
-    Plus: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-        </svg>
-    ),
-    Trash: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-        </svg>
-    ),
-    Cross: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 6 6 18M6 6l12 12" />
-        </svg>
-    ),
-    Pencil: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-        </svg>
-    ),
-    Hourglass: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2v6a6 6 0 0 0 6 6 6 6 0 0 0 6-6V2M6 22v-6a6 6 0 0 1 6-6 6 6 0 0 1 6 6v6" />
-        </svg>
-    ),
-    Target: () => (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <circle cx="12" cy="12" r="6" />
-            <circle cx="12" cy="12" r="2" />
-        </svg>
-    ),
-};
-
 function App() {
     const [gameState, setGameState] = useState('home');
     const [pseudo, setPseudo] = useState('');
@@ -114,8 +32,10 @@ function App() {
     const [guess, setGuess] = useState(['', '', '', '']);
     const [history, setHistory] = useState([]);
     const [message, setMessage] = useState('Trouve le code secret de ton adversaire !');
+    const [errorMessage, setErrorMessage] = useState('');
     const [players, setPlayers] = useState({ player1: '', player2: '' });
     const [myPlayerId, setMyPlayerId] = useState(null);
+    const [uuid, setUuid] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(1);
     const [isMyTurn, setIsMyTurn] = useState(false);
     const [gameSettings, setGameSettings] = useState({
@@ -139,23 +59,72 @@ function App() {
     const [eliminatedDigits, setEliminatedDigits] = useState(new Set());
     const [historyViewMode, setHistoryViewMode] = useState('grid');
     const [historySortMode, setHistorySortMode] = useState('recent');
-    const [reconnecting, setReconnecting] = useState(false);
-    const [sessionId, setSessionId] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isConnected, setIsConnected] = useState(false);
+    const [mySocketId, setMySocketId] = useState(null);
 
     const secretInputs = useRef([]);
     const guessInputs = useRef([]);
     const notepadInputs = useRef([]);
+    const submitTimeoutRef = useRef(null);
+
+    // AJOUTÉ : Fonction pour réinitialiser proprement l'état et retourner à l'accueil
+    const resetToHome = (msg) => {
+        setGameState('home');
+        setRoomId('');
+        setPlayerSecret(Array(gameSettings.digits).fill(''));
+        setGuess(Array(gameSettings.digits).fill(''));
+        setHistory([]);
+        setPlayers({ player1: '', player2: '' });
+        setMyPlayerId(null);
+        setUuid(null);
+        setImReady(false);
+        setIsSubmitting(false);
+        setNotepadEntries([]);
+        setEliminatedDigits(new Set());
+        setMessage(msg || 'Prêt pour une nouvelle partie !');
+        localStorage.removeItem('chiffrioState');
+    };
+
+
+    const resetGuessAndNotepad = (digits) => {
+        setGuess(Array(digits).fill(''));
+        setCurrentNotepadEntry(Array(digits).fill(''));
+    };
+
+    const resetAllInputs = (digits) => {
+        setPlayerSecret(Array(digits).fill(''));
+        setGuess(Array(digits).fill(''));
+        setCurrentNotepadEntry(Array(digits).fill(''));
+    };
 
     useEffect(() => {
-        const stored = localStorage.getItem('chiffrio-session');
-        if (stored) {
-            setSessionId(stored);
-        } else {
-            const newId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-            setSessionId(newId);
-            localStorage.setItem('chiffrio-session', newId);
-        }
+        socket.on('connect', () => {
+            console.log('✅ Connecté au serveur:', socket.id);
+            setIsConnected(true);
+            setMySocketId(socket.id);
+            setMessage('Connecté au serveur !');
+
+            const stored = JSON.parse(localStorage.getItem('chiffrioState'));
+            if (stored && stored.roomId && stored.uuid && stored.pseudo) {
+                setPseudo(stored.pseudo);
+                setRoomId(stored.roomId);
+                setUuid(stored.uuid);
+                setMyPlayerId(stored.playerId);
+                socket.emit('reconnectToRoom', { pseudo: stored.pseudo, roomId: stored.roomId, uuid: stored.uuid });
+            }
+        });
+
+        socket.on('disconnect', () => {
+            console.log('❌ Déconnecté du serveur');
+            setIsConnected(false);
+            setMessage('Connexion perdue... Reconnexion en cours...');
+        });
+
+        return () => {
+            socket.off('connect');
+            socket.off('disconnect');
+        };
     }, []);
 
     useEffect(() => {
@@ -167,94 +136,112 @@ function App() {
     }, []);
 
     useEffect(() => {
-        if (!sessionId) return;
-
-        socket.offAny();
-
-        socket.on('connect', () => {
-            console.log('Connecté au serveur Socket.IO');
-            if (reconnecting) {
-                socket.emit('reconnect', { sessionId });
-            }
-        });
-
-        socket.on('disconnect', () => {
-            console.log('Déconnecté du serveur');
-            setReconnecting(true);
-            setMessage('Connexion perdue... Tentative de reconnexion...');
-        });
-
-        socket.on('reconnected', (data) => {
-            console.log('Reconnecté avec succès');
-            setReconnecting(false);
-            if (data.gameState) {
-                setGameState(data.gameState.state);
-                setRoomId(data.gameState.roomId);
-                setPlayers(data.gameState.players);
-                setMyPlayerId(data.gameState.myPlayerId);
-                setCurrentPlayer(data.gameState.currentPlayer);
-                setIsMyTurn(data.gameState.isMyTurn);
-                const newSettings = data.gameState.gameSettings;
-                setGameSettings(newSettings);
-                setSavedSettings(newSettings);
-                setHistory(data.gameState.history || []);
-                setPlayerSecret(data.gameState.playerSecret || Array(newSettings.digits).fill(''));
-                setGuess(Array(newSettings.digits).fill(''));
-                setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
-                setMessage('Reconnexion réussie ! Vous pouvez reprendre la partie.');
-            }
-        });
-
         socket.on('roomCreated', (data) => {
+            console.log('🎮 Salle créée:', data);
             setRoomId(data.roomId);
             setMyPlayerId(1);
+            setUuid(data.uuid);
             setGameState('hosting');
             setMessage(`Salle créée ! Code: ${data.roomId}`);
             setPlayers((prev) => ({ ...prev, player1: pseudo }));
             const newSettings = data.gameSettings;
             setGameSettings(newSettings);
             setSavedSettings(newSettings);
-            setPlayerSecret(Array(newSettings.digits).fill(''));
-            setGuess(Array(newSettings.digits).fill(''));
-            setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
+            resetAllInputs(newSettings.digits);
+            localStorage.setItem('chiffrioState', JSON.stringify({
+                pseudo,
+                roomId: data.roomId,
+                playerId: 1,
+                uuid: data.uuid
+            }));
+            localStorage.setItem('chiffrioLastSettings', JSON.stringify(newSettings));
         });
 
         socket.on('roomJoined', (data) => {
+            console.log('✅ Salle rejointe:', data);
             setRoomId(data.roomId);
             setPlayers(data.players);
             setMyPlayerId(2);
+            setUuid(data.uuid);
             setGameState('setup');
             setMessage('Connexion réussie ! Choisis ton nombre secret.');
             const newSettings = data.gameSettings;
             setGameSettings(newSettings);
             setSavedSettings(newSettings);
-            setPlayerSecret(Array(newSettings.digits).fill(''));
-            setGuess(Array(newSettings.digits).fill(''));
-            setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
+            resetAllInputs(newSettings.digits);
+            localStorage.setItem('chiffrioState', JSON.stringify({
+                pseudo,
+                roomId: data.roomId,
+                playerId: 2,
+                uuid: data.uuid
+            }));
+            localStorage.setItem('chiffrioLastSettings', JSON.stringify(newSettings));
         });
 
-        socket.on('error', (message) => {
-            setMessage(message);
+        socket.on('reconnected', (data) => {
+            console.log('✅ Reconnecté:', data);
+            setRoomId(data.roomId);
+            setPlayers(data.players);
+            setMyPlayerId(data.myPlayerId);
+            setGameState(data.gameState);
+            setGameSettings(data.gameSettings);
+            setSavedSettings(data.gameSettings);
+            setHistory(data.history || []);
+            setMessage('Reconnecté à la partie !');
+            if (data.mySecret) {
+                setPlayerSecret(data.mySecret.split(''));
+                setImReady(true);
+            } else {
+                resetAllInputs(data.gameSettings.digits);
+                setImReady(false);
+            }
+            if (data.gameState === 'playing') {
+                resetGuessAndNotepad(data.gameSettings.digits);
+            }
+        });
+
+        socket.on('error', (errorMessage) => {
+            console.error('❌ Erreur:', errorMessage);
+            setMessage(errorMessage);
             setIsSubmitting(false);
+            if (submitTimeoutRef.current) {
+                clearTimeout(submitTimeoutRef.current);
+            }
+        });
+
+        socket.on('validationError', (errorMessage) => {
+            console.error('❌ Validation Error:', errorMessage);
+            setErrorMessage(errorMessage);
+            setIsSubmitting(false);
+            if (submitTimeoutRef.current) {
+                clearTimeout(submitTimeoutRef.current);
+            }
+            setTimeout(() => setErrorMessage(''), 3000);
         });
 
         socket.on('playerJoined', (data) => {
+            console.log('👤 Joueur rejoint:', data);
             setPlayers(data.players);
             setMessage(`${data.players.player2} a rejoint la partie !`);
             setGameState('setup');
             const newSettings = data.gameSettings;
             setGameSettings(newSettings);
             setSavedSettings(newSettings);
-            setPlayerSecret(Array(newSettings.digits).fill(''));
-            setGuess(Array(newSettings.digits).fill(''));
-            setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
+            resetAllInputs(newSettings.digits);
+        });
+
+        socket.on('playerReconnected', ({ pseudo }) => {
+            console.log('👤 Joueur reconnecté:', pseudo);
+            setMessage(`${pseudo} est de retour !`);
         });
 
         socket.on('secretSet', ({ player }) => {
+            console.log('🔒 Secret défini pour joueur', player);
             setMessage(`Joueur ${player} a défini son code secret.`);
         });
 
         socket.on('gameStart', (data) => {
+            console.log('🎮 Jeu démarré:', data);
             setGameState('playing');
             setIsMyTurn(data.currentPlayer === myPlayerId);
             setCurrentPlayer(data.currentPlayer);
@@ -263,24 +250,32 @@ function App() {
                 const newSettings = data.gameSettings;
                 setGameSettings(newSettings);
                 setSavedSettings(newSettings);
+                resetGuessAndNotepad(newSettings.digits);
             }
         });
 
         socket.on('feedback', (data) => {
+            console.log('📊 Feedback reçu:', data);
             setIsSubmitting(false);
+            if (submitTimeoutRef.current) {
+                clearTimeout(submitTimeoutRef.current);
+            }
+
             const newEntry = {
                 guess: data.guess,
                 player: data.player,
                 wellPlaced: data.feedback.wellPlaced,
                 misplaced: data.feedback.misplaced,
-                wellPlacedDigits: data.feedback.wellPlacedDigits,
-                misplacedDigits: data.feedback.misplacedDigits,
+                wellPlacedDigits: data.feedback.wellPlacedDigits || [],
+                misplacedDigits: data.feedback.misplacedDigits || [],
                 timestamp: Date.now(),
             };
+
             setHistory((prevHistory) => {
                 const newHistory = [...prevHistory, newEntry];
                 return newHistory.slice(-100);
             });
+
             if (data.feedback.wellPlaced === gameSettings.digits) {
                 setGameState('won');
                 setMessage(`Bravo ${getPlayerName(data.player)} ! Tu as gagné !`);
@@ -293,11 +288,10 @@ function App() {
         });
 
         socket.on('gameRestarted', () => {
+            console.log('🔄 Jeu relancé');
             setGameState('setup');
-            setPlayerSecret(Array(gameSettings.digits).fill(''));
-            setGuess(Array(gameSettings.digits).fill(''));
+            resetAllInputs(gameSettings.digits);
             setHistory([]);
-            setCurrentNotepadEntry(Array(gameSettings.digits).fill(''));
             setNotepadEntries([]);
             setEliminatedDigits(new Set());
             setImReady(false);
@@ -306,34 +300,71 @@ function App() {
         });
 
         socket.on('settingsUpdated', (newSettings) => {
+            console.log('⚙️ Paramètres mis à jour:', newSettings);
             setGameSettings(newSettings);
             setSavedSettings(newSettings);
-            setPlayerSecret(Array(newSettings.digits).fill(''));
-            setGuess(Array(newSettings.digits).fill(''));
-            setCurrentNotepadEntry(Array(newSettings.digits).fill(''));
+            resetAllInputs(newSettings.digits);
+            setImReady(false);
             setMessage("Les règles ont été mises à jour par l'hôte.");
         });
 
-        socket.on('playerDisconnected', ({ pseudo }) => {
-            setMessage(`${pseudo} s'est déconnecté. En attente de reconnexion...`);
+        socket.on('playerDisconnected', ({ pseudo: disconnectedPseudo }) => {
+            console.log('⚠️ Joueur déconnecté:', disconnectedPseudo);
+            setMessage(`${disconnectedPseudo} s'est déconnecté.`);
+        });
+
+        // AJOUTÉ: Gestionnaire pour la fin de partie initiée par l'autre joueur
+        socket.on('gameEndedByHost', () => {
+            console.log("🎬 L'adversaire a mis fin à la partie.");
+            resetToHome("Ton adversaire a lancé une nouvelle partie. Tu as été renvoyé à l'accueil.");
+        });
+
+        socket.on('newRoomCreatedAfterEnd', (data) => {
+            console.log('🎮 Nouvelle salle créée après fin de partie:', data);
+            setRoomId(data.roomId);
+            setMyPlayerId(1);
+            setUuid(data.uuid);
+            setGameState('hosting');
+            setMessage(`Nouvelle partie créée ! Code: ${data.roomId}`);
+            setPlayers({ player1: pseudo, player2: '' }); // CHANGÉ : On réinitialise player2
+            const newSettings = data.gameSettings;
+            setGameSettings(newSettings);
+            setSavedSettings(newSettings);
+            resetAllInputs(newSettings.digits);
+            setHistory([]); // AJOUTÉ : Vider l'historique
+            setNotepadEntries([]); // AJOUTÉ : Vider le bloc-notes
+            setEliminatedDigits(new Set()); // AJOUTÉ : Vider les chiffres éliminés
+
+            localStorage.setItem('chiffrioState', JSON.stringify({
+                pseudo,
+                roomId: data.roomId,
+                playerId: 1,
+                uuid: data.uuid
+            }));
+            localStorage.setItem('chiffrioLastSettings', JSON.stringify(newSettings));
         });
 
         return () => {
-            socket.off('connect');
-            socket.off('disconnect');
-            socket.off('reconnected');
             socket.off('roomCreated');
             socket.off('roomJoined');
+            socket.off('reconnected');
             socket.off('error');
+            socket.off('validationError');
             socket.off('playerJoined');
+            socket.off('playerReconnected');
             socket.off('secretSet');
             socket.off('gameStart');
             socket.off('feedback');
             socket.off('gameRestarted');
             socket.off('settingsUpdated');
             socket.off('playerDisconnected');
+            socket.off('newRoomCreatedAfterEnd');
+            socket.off('gameEndedByHost'); // AJOUTÉ : Nettoyage de l'écouteur
         };
-    }, [myPlayerId, pseudo, players, gameSettings.digits, sessionId]);
+    }, [myPlayerId, pseudo, players, gameSettings.digits]);
+
+    // ... (le reste du composant reste identique)
+    // ... (all other functions: createRoom, joinRoom, handleGuessSubmit, etc. remain the same)
 
     useEffect(() => {
         const isEqual = JSON.stringify(gameSettings) === JSON.stringify(savedSettings);
@@ -345,7 +376,12 @@ function App() {
             setMessage('Choisis un pseudo valide (au moins 2 caractères) !');
             return;
         }
-        socket.emit('createRoom', { pseudo: pseudo.trim(), gameSettings, sessionId });
+        if (!isConnected) {
+            setMessage('Connexion au serveur en cours...');
+            return;
+        }
+        console.log('📤 Création de salle:', { pseudo: pseudo.trim(), gameSettings });
+        socket.emit('createRoom', { pseudo: pseudo.trim(), gameSettings });
     };
 
     const joinRoom = () => {
@@ -353,7 +389,23 @@ function App() {
             setMessage('Remplis tous les champs avec un pseudo valide (au moins 2 caractères) !');
             return;
         }
-        socket.emit('joinRoom', { pseudo: pseudo.trim(), roomId: roomId.trim(), sessionId });
+        if (!isConnected) {
+            setMessage('Connexion au serveur en cours...');
+            return;
+        }
+        console.log('📤 Rejoindre salle:', { pseudo: pseudo.trim(), roomId: roomId.trim() });
+        socket.emit('joinRoom', { pseudo: pseudo.trim(), roomId: roomId.trim() });
+    };
+
+    const endGameAndNewRoom = () => {
+        if (!isConnected) {
+            setMessage('Connexion au serveur en cours...');
+            return;
+        }
+        const lastSettings = JSON.parse(localStorage.getItem('chiffrioLastSettings') || '{}');
+        console.log('📤 Fin de partie et nouvelle salle:', { pseudo: pseudo.trim(), gameSettings: lastSettings });
+        socket.emit('endGameAndNewRoom', { pseudo: pseudo.trim(), gameSettings: lastSettings });
+        setMessage('Création d\'une nouvelle partie...');
     };
 
     const updateGameSettings = () => {
@@ -361,28 +413,35 @@ function App() {
             setMessage('Aucune modification à enregistrer.');
             return;
         }
-        socket.emit('updateSettings', { roomId, gameSettings, sessionId });
+        console.log('📤 Mise à jour des paramètres:', { roomId, gameSettings });
+        socket.emit('updateSettings', { roomId, gameSettings });
+        setMessage('Mise à jour des règles...');
     };
 
     const handleRestart = () => {
-        socket.emit('restartGame', { roomId, sessionId });
+        console.log('📤 Relancer la partie:', roomId);
+        socket.emit('restartGame', { roomId });
     };
 
-    const handleInputKeyDown = (e, index, value, setValue, handleSubmit) => {
+    const handleInputKeyDown = (e, index, inputsArray, setterFunction, handleSubmit, refArray) => {
+        e.stopPropagation();
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (value.join('').length === gameSettings.digits) {
+            const allFilled = inputsArray.every(val => val !== '');
+            if (allFilled) {
                 handleSubmit();
             }
-        }
-        if (e.key === 'Backspace' && value[index] === '' && index > 0) {
+        } else if (e.key === 'Backspace') {
             e.preventDefault();
-            const newValues = [...value];
-            newValues[index - 1] = '';
-            setValue(newValues);
-            if (setValue === setPlayerSecret) secretInputs.current[index - 1]?.focus();
-            else if (setValue === setGuess) guessInputs.current[index - 1]?.focus();
-            else notepadInputs.current[index - 1]?.focus();
+            const newValues = [...inputsArray];
+            if (inputsArray[index] === '' && index > 0) {
+                newValues[index - 1] = '';
+                setterFunction(newValues);
+                refArray.current[index - 1]?.focus();
+            } else if (inputsArray[index] !== '') {
+                newValues[index] = '';
+                setterFunction(newValues);
+            }
         }
     };
 
@@ -462,15 +521,18 @@ function App() {
     const handleSecretSubmit = () => {
         const secret = playerSecret.join('');
         if (secret.length !== gameSettings.digits || !/^\d+$/.test(secret)) {
-            setMessage(`Entre ${gameSettings.digits} chiffres valides !`);
+            setErrorMessage(`Entre ${gameSettings.digits} chiffres valides !`);
+            setTimeout(() => setErrorMessage(''), 3000);
             return;
         }
         if (!gameSettings.allowDuplicates && new Set(secret.split('')).size !== secret.length) {
-            setMessage('Pas de chiffres en double autorisés !');
+            setErrorMessage('Pas de chiffres en double autorisés !');
+            setTimeout(() => setErrorMessage(''), 3000);
             return;
         }
         setImReady(true);
-        socket.emit('setSecret', { secret, player: myPlayerId, sessionId });
+        console.log('📤 Envoi du secret:', { player: myPlayerId });
+        socket.emit('setSecret', { secret, player: myPlayerId });
         setMessage("En attente de l'autre joueur...");
     };
 
@@ -479,19 +541,33 @@ function App() {
             setMessage('Pas ton tour !');
             return;
         }
-        if (isSubmitting) return;
+        if (isSubmitting) {
+            console.log('⚠️ Soumission déjà en cours');
+            return;
+        }
+
         const guessStr = guess.join('');
         if (guessStr.length !== gameSettings.digits || !/^\d+$/.test(guessStr)) {
-            setMessage(`Entre ${gameSettings.digits} chiffres valides !`);
+            setErrorMessage(`Entre ${gameSettings.digits} chiffres valides !`);
+            setTimeout(() => setErrorMessage(''), 3000);
             return;
         }
         if (!gameSettings.allowDuplicates && new Set(guessStr.split('')).size !== guessStr.length) {
-            setMessage('Pas de chiffres en double autorisés !');
+            setErrorMessage('Pas de chiffres en double autorisés !');
+            setTimeout(() => setErrorMessage(''), 3000);
             return;
         }
+
         setIsSubmitting(true);
-        socket.emit('submitGuess', { guess: guessStr, player: myPlayerId, sessionId });
+        console.log('📤 Soumission de la proposition:', { guess: guessStr, player: myPlayerId });
+        socket.emit('submitGuess', { guess: guessStr, player: myPlayerId });
         setMessage('En attente de la réponse...');
+
+        submitTimeoutRef.current = setTimeout(() => {
+            setIsSubmitting(false);
+            setMessage('Timeout - Réessaie ta proposition');
+            console.error('⏱️ Timeout de soumission');
+        }, 10000);
     };
 
     const copyRoomLink = () => {
@@ -508,21 +584,35 @@ function App() {
     const inputFields = (value, onChange, disabled, inputRef, handleSubmit, size = 'large') => {
         const sizeClasses = size === 'small' ? 'w-10 h-10 text-lg' : 'w-12 h-12 text-3xl';
         return (
-            <div className="flex justify-center gap-2">
-                {Array.from({ length: gameSettings.digits }, (_, i) => (
-                    <input
-                        key={i}
-                        ref={(el) => (inputRef.current[i] = el)}
-                        type="text"
-                        maxLength={1}
-                        value={value[i] || ''}
-                        onChange={(e) => onChange(e, i)}
-                        onKeyDown={(e) => handleInputKeyDown(e, i, value, setValue => onChange({ target: { value: setValue } }, i), handleSubmit)}
-                        onPaste={(e) => e.preventDefault()}
-                        disabled={disabled}
-                        className={`${sizeClasses} font-black text-center text-text-color transition-all duration-200 rounded-lg border-3 border-text-color ${disabled ? 'bg-gray-200 cursor-not-allowed' : 'bg-white hover:shadow-sketchy-sm focus:shadow-sketchy focus:-translate-x-[2px] focus:-translate-y-[2px]'}`}
-                    />
-                ))}
+            <div>
+                <div className="flex justify-center gap-2">
+                    {Array.from({ length: gameSettings.digits }, (_, i) => (
+                        <input
+                            key={i}
+                            ref={(el) => (inputRef.current[i] = el)}
+                            type="text"
+                            maxLength={1}
+                            value={value[i] || ''}
+                            onChange={(e) => onChange(e, i)}
+                            onKeyDown={(e) => handleInputKeyDown(e, i, value,
+                                (newVal) => {
+                                    if (inputRef === secretInputs) setPlayerSecret(newVal);
+                                    else if (inputRef === guessInputs) setGuess(newVal);
+                                    else setCurrentNotepadEntry(newVal);
+                                },
+                                handleSubmit,
+                                inputRef
+                            )}
+                            onPaste={(e) => e.preventDefault()}
+                            disabled={disabled}
+                            className={`${sizeClasses} font-black text-center text-text-color transition-all duration-200 rounded-lg border-3 border-text-color ${disabled ? 'bg-gray-200 cursor-not-allowed' : 'bg-white hover:shadow-sketchy-sm focus:shadow-sketchy focus:-translate-x-[2px] focus:-translate-y-[2px]'}`}
+                            aria-label={`Chiffre ${i + 1}`}
+                        />
+                    ))}
+                </div>
+                {errorMessage && (inputRef === secretInputs || inputRef === guessInputs) && (
+                    <p className="text-red-500 font-bold text-center mt-2 animate-pulse">{errorMessage}</p>
+                )}
             </div>
         );
     };
@@ -547,13 +637,13 @@ function App() {
 
     const renderHistoryGrid = (entries) => (
         <div className="grid grid-cols-4 gap-3">
-            {entries.map((entry, index) => (
+            {entries.map((entry) => (
                 <div key={`${entry.player}-${entry.guess}-${entry.timestamp}`} className="bg-white rounded-lg p-2 text-center border-2 border-text-color shadow-sketchy-sm">
                     <div className="font-mono text-xl font-bold text-text-color mb-1">
                         {entry.guess.split('').map((digit, i) => (
-                            <span key={i} className={entry.wellPlacedDigits.includes(i) ? 'text-[var(--green-color)]' : entry.misplacedDigits.includes(i) ? 'text-[var(--accent-color)]' : ''}>
-                {digit}
-              </span>
+                            <span key={i} className={(entry.wellPlacedDigits || []).includes(i) ? 'text-[var(--green-color)]' : (entry.misplacedDigits || []).includes(i) ? 'text-[var(--accent-color)]' : ''}>
+                                {digit}
+                            </span>
                         ))}
                     </div>
                     <div className="flex justify-center gap-1 text-xs">
@@ -569,16 +659,16 @@ function App() {
 
     const renderHistoryList = (entries) => (
         <div className="space-y-3">
-            {entries.map((entry, index) => (
+            {entries.map((entry) => (
                 <div key={`${entry.player}-${entry.guess}-${entry.timestamp}`} className="bg-white p-3 rounded-xl border-4 border-text-color shadow-sketchy-sm">
                     <div className="flex justify-between items-center">
-            <span className="font-mono text-2xl font-bold text-text-color bg-white px-2 py-1 rounded-lg">
-              {entry.guess.split('').map((digit, i) => (
-                  <span key={i} className={entry.wellPlacedDigits.includes(i) ? 'text-[var(--green-color)]' : entry.misplacedDigits.includes(i) ? 'text-[var(--accent-color)]' : ''}>
-                  {digit}
-                </span>
-              ))}
-            </span>
+                        <span className="font-mono text-2xl font-bold text-text-color bg-white px-2 py-1 rounded-lg">
+                            {entry.guess.split('').map((digit, i) => (
+                                <span key={i} className={(entry.wellPlacedDigits || []).includes(i) ? 'text-[var(--green-color)]' : (entry.misplacedDigits || []).includes(i) ? 'text-[var(--accent-color)]' : ''}>
+                                    {digit}
+                                </span>
+                            ))}
+                        </span>
                         <div className="flex gap-2">
                             <span className="bg-green-200 text-green-800 px-3 py-1 rounded-lg text-sm font-bold border-2 border-[var(--green-color)]">{entry.wellPlaced}</span>
                             {gameSettings.showMisplaced && (
@@ -594,7 +684,7 @@ function App() {
     const renderGameSettings = (showUpdateButton = false, isDisabled = false) => (
         <div className="bg-white rounded-2xl p-6 border-4 border-text-color shadow-sketchy mt-6">
             <h3 className="font-black text-2xl mb-4 flex items-center gap-2">
-                <ICONS.Settings />
+                <FaCog />
                 <span>Règles du jeu</span>
             </h3>
             <div className="space-y-4">
@@ -605,9 +695,7 @@ function App() {
                         onChange={(e) => {
                             const d = parseInt(e.target.value);
                             setGameSettings((prev) => ({ ...prev, digits: d }));
-                            setPlayerSecret(Array(d).fill(''));
-                            setGuess(Array(d).fill(''));
-                            setCurrentNotepadEntry(Array(d).fill(''));
+                            resetAllInputs(d);
                         }}
                         disabled={isDisabled}
                         className="font-bold p-2 bg-white border-2 border-text-color rounded-lg focus:shadow-sketchy focus:-translate-x-[2px] focus:-translate-y-[2px]"
@@ -620,16 +708,14 @@ function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {['allowDuplicates', 'showMisplaced', 'showWellPlacedDigits', 'showMisplacedDigits'].map((key) => (
                         <label key={key} className="flex items-center justify-between bg-white rounded-lg p-3 border-2 border-text-color cursor-pointer h-full">
-              <span className="font-bold">
-                {
-                    {
-                        allowDuplicates: 'Doublons autorisés',
-                        showMisplaced: 'Afficher mal placés',
-                        showWellPlacedDigits: 'Indices positions (Bien)',
-                        showMisplacedDigits: 'Indices positions (Mal)',
-                    }[key]
-                }
-              </span>
+                            <span className="font-bold">
+                                {{
+                                    allowDuplicates: 'Doublons autorisés',
+                                    showMisplaced: 'Afficher mal placés',
+                                    showWellPlacedDigits: 'Indices positions (Bien)',
+                                    showMisplacedDigits: 'Indices positions (Mal)',
+                                }[key]}
+                            </span>
                             <input
                                 type="checkbox"
                                 checked={gameSettings[key]}
@@ -652,13 +738,16 @@ function App() {
             </div>
         </div>
     );
+    // ... (le JSX de retour reste identique jusqu'à la fin)
 
     return (
         <div className="min-h-screen">
             <DoodleMathShapes />
-            {reconnecting && (
-                <div className="fixed top-4 right-4 bg-[var(--accent-color)] text-text-color px-4 py-2 rounded-lg border-4 border-text-color shadow-sketchy z-50 font-bold animate-pulse">
-                    Reconnexion...
+
+            {!isConnected && (
+                <div className="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg border-4 border-text-color shadow-sketchy z-50 font-bold animate-pulse flex items-center gap-2">
+                    <FaClock />
+                    Connexion...
                 </div>
             )}
 
@@ -674,14 +763,14 @@ function App() {
                             </div>
                         )}
                     </div>
-                    {(gameState === 'playing' || gameState === 'setup') && (
+                    {(gameState === 'playing' || gameState === 'setup' || gameState === 'won') && (
                         <div className="flex items-center gap-4">
                             <div className="text-right bg-white px-3 py-2 rounded-lg border-2 border-text-color">
                                 <div className="text-xs font-bold -mb-1">TON SECRET</div>
                                 <div className="text-2xl font-mono font-black">{playerSecret.join('') || Array(gameSettings.digits).fill('?').join('')}</div>
                             </div>
                             <button onClick={handleRestart} className="btn-sketchy bg-[var(--red-color)] text-white px-4 py-2 rounded-xl text-lg flex items-center gap-2">
-                                <ICONS.Hourglass /> Relancer
+                                <FaRedo /> Relancer
                             </button>
                         </div>
                     )}
@@ -690,7 +779,7 @@ function App() {
 
             <div className="bg-[var(--primary-color)] text-white p-3 relative z-10 border-b-4 border-text-color shadow-sketchy">
                 <div className="max-w-7xl mx-auto text-center">
-                    <p className="font-bold text-lg text-white" >{message}</p>
+                    <p className="font-bold text-lg text-white">{message}</p>
                 </div>
             </div>
 
@@ -707,7 +796,9 @@ function App() {
                             value={pseudo}
                             onChange={(e) => setPseudo(e.target.value)}
                             placeholder="Ton pseudo..."
+                            maxLength={20}
                             className="w-full p-4 text-center text-xl font-bold rounded-lg border-3 border-text-color focus:shadow-sketchy focus:-translate-x-[2px] focus:-translate-y-[2px]"
+                            aria-label="Pseudo"
                         />
                         <div className="grid grid-cols-2 gap-4 mt-6">
                             <button
@@ -715,7 +806,8 @@ function App() {
                                     if (pseudo.trim()?.length >= 2) setGameState('createSettings');
                                     else setMessage('Choisis un pseudo valide !');
                                 }}
-                                className="btn-sketchy bg-[var(--primary-color)] text-white p-4 rounded-xl text-xl"
+                                disabled={!isConnected}
+                                className="btn-sketchy bg-[var(--primary-color)] text-white p-4 rounded-xl text-xl disabled:bg-gray-300 disabled:cursor-not-allowed"
                             >
                                 Créer une partie
                             </button>
@@ -724,7 +816,8 @@ function App() {
                                     if (pseudo.trim()?.length >= 2) setGameState('joinInput');
                                     else setMessage('Choisis un pseudo valide !');
                                 }}
-                                className="btn-sketchy bg-[var(--accent-color)] text-text-color p-4 rounded-xl text-xl"
+                                disabled={!isConnected}
+                                className="btn-sketchy bg-[var(--accent-color)] text-text-color p-4 rounded-xl text-xl disabled:bg-gray-300 disabled:cursor-not-allowed"
                             >
                                 Rejoindre
                             </button>
@@ -752,6 +845,7 @@ function App() {
                             placeholder="CODE DE LA SALLE"
                             className="w-full p-4 text-center font-mono text-3xl font-black tracking-widest rounded-lg border-3 border-text-color focus:shadow-sketchy focus:-translate-x-[2px] focus:-translate-y-[2px]"
                             maxLength={6}
+                            aria-label="Code de la salle"
                         />
                         <button onClick={joinRoom} className="btn-sketchy w-full bg-[var(--accent-color)] text-text-color p-4 rounded-xl text-xl mt-6">
                             Rejoindre
@@ -761,8 +855,8 @@ function App() {
 
                 {gameState === 'hosting' && (
                     <div className="max-w-md mx-auto mt-10 bg-white rounded-2xl p-8 border-4 border-text-color shadow-sketchy text-center">
-                        <div className="text-8xl mb-4 animate-pulse">
-                            <ICONS.Hourglass />
+                        <div className="text-8xl mb-4 animate-pulse flex justify-center">
+                            <FaClock />
                         </div>
                         <h2 className="text-4xl font-black mb-4">En attente...</h2>
                         <div className="bg-[var(--accent-color)]/20 rounded-lg p-4 mb-6 border-2 border-text-color">
@@ -774,7 +868,7 @@ function App() {
                             onClick={copyRoomLink}
                             className="btn-sketchy bg-[var(--primary-color)] text-white px-8 py-4 rounded-xl text-lg mt-2 flex items-center justify-center gap-2 mx-auto"
                         >
-                            <ICONS.Link /> Copier le lien
+                            <FaLink /> Copier le lien
                         </button>
                     </div>
                 )}
@@ -793,11 +887,11 @@ function App() {
                         >
                             {imReady ? (
                                 <>
-                                    <ICONS.Check /> VALIDÉ
+                                    <FaCheck /> VALIDÉ
                                 </>
                             ) : (
                                 <>
-                                    <ICONS.Lock /> Valider
+                                    <FaLock /> Valider
                                 </>
                             )}
                         </button>
@@ -814,14 +908,14 @@ function App() {
                         <div className="col-span-1 bg-white rounded-2xl p-4 border-4 border-text-color shadow-sketchy">
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="font-black text-2xl flex items-center gap-2">
-                                    <ICONS.Notepad />
+                                    <FaStickyNote />
                                     <span>Bloc-notes</span>
                                 </h3>
                                 <button
                                     onClick={clearAllNotepad}
                                     className="btn-sketchy text-xs bg-[var(--red-color)] text-white rounded-lg p-1.5 flex items-center gap-1"
                                 >
-                                    <ICONS.Trash /> Tout Vider
+                                    <FaTrash /> Tout Vider
                                 </button>
                             </div>
                             <div className="mb-2">{inputFields(currentNotepadEntry, handleNotepadInputChange, false, notepadInputs, addNotepadEntry, 'small')}</div>
@@ -831,20 +925,20 @@ function App() {
                                     disabled={currentNotepadEntry.join('').length !== gameSettings.digits}
                                     className="btn-sketchy flex-1 text-xs bg-[var(--green-color)] text-white rounded-lg p-1.5 disabled:bg-gray-300 disabled:text-gray-500 flex items-center justify-center gap-1"
                                 >
-                                    <ICONS.Plus /> Ajouter
+                                    <FaPlus /> Ajouter
                                 </button>
                                 <button
                                     onClick={clearNotepad}
                                     className="btn-sketchy text-xs bg-[var(--primary-color)] text-white rounded-lg p-1.5 flex items-center justify-center gap-1"
                                 >
-                                    <ICONS.Trash /> Effacer
+                                    <FaTrash /> Effacer
                                 </button>
                             </div>
                             <div className="space-y-2 max-h-[calc(100vh-500px)] overflow-y-auto pr-2">
                                 {notepadEntries.length === 0 ? (
                                     <div className="text-center py-4">
-                                        <div className="text-5xl mb-2 opacity-50">
-                                            <ICONS.Pencil />
+                                        <div className="text-5xl mb-2 opacity-50 flex justify-center">
+                                            <FaPencilAlt />
                                         </div>
                                         <p className="font-bold text-sm">Aucune combinaison testée</p>
                                     </div>
@@ -857,17 +951,18 @@ function App() {
                                                     onClick={() => deleteNotepadEntry(entry.id)}
                                                     className="text-red-500 font-black flex items-center gap-1"
                                                 >
-                                                    <ICONS.Cross />
+                                                    <FaTimes />
                                                 </button>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <ICONS.Pencil className="w-4 h-4 text-primary-color" />
+                                                <FaPencilAlt className="w-4 h-4 text-primary-color" />
                                                 <input
                                                     type="text"
                                                     value={entry.notes}
                                                     onChange={(e) => updateNotepadEntry(entry.id, e.target.value)}
                                                     placeholder="Notes..."
                                                     className="w-full text-xs p-1 border-2 border-text-color rounded-lg focus:shadow-sketchy focus:-translate-x-[2px] focus:-translate-y-[2px]"
+                                                    aria-label="Notes pour la combinaison"
                                                 />
                                             </div>
                                         </div>
@@ -882,6 +977,7 @@ function App() {
                                             key={d}
                                             onClick={() => toggleEliminated(d)}
                                             className={`w-full h-10 rounded-lg font-black text-xl border-2 border-text-color ${eliminatedDigits.has(d) ? 'bg-[var(--red-color)] text-white line-through' : 'bg-white'}`}
+                                            aria-label={`Chiffre ${d} éliminé`}
                                         >
                                             {d}
                                         </button>
@@ -894,11 +990,11 @@ function App() {
                             <h2 className="text-4xl font-black mb-4 flex items-center justify-center gap-2">
                                 {isMyTurn ? (
                                     <>
-                                        <ICONS.Target /> À TOI !
+                                        <FaBullseye /> À TOI !
                                     </>
                                 ) : (
                                     <>
-                                        <ICONS.Hourglass /> TOUR DE {getOpponentName()}
+                                        <FaClock /> TOUR DE {getOpponentName()?.toUpperCase()}
                                     </>
                                 )}
                             </h2>
@@ -924,20 +1020,22 @@ function App() {
                         <div className="col-span-2 bg-white rounded-2xl p-6 border-4 border-text-color shadow-sketchy">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-3xl font-black flex items-center gap-2">
-                                    <ICONS.History />
+                                    <FaHistory />
                                     <span>Ton Historique</span>
                                 </h3>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => setHistoryViewMode((v) => (v === 'grid' ? 'list' : 'grid'))}
                                         className="btn-sketchy bg-white p-2 rounded-lg border-2 border-text-color"
+                                        aria-label="Changer le mode d'affichage de l'historique"
                                     >
-                                        {historyViewMode === 'grid' ? <ICONS.List /> : <ICONS.Grid />}
+                                        {historyViewMode === 'grid' ? <FaList /> : <FaThLarge />}
                                     </button>
                                     <select
                                         value={historySortMode}
                                         onChange={(e) => setHistorySortMode(e.target.value)}
                                         className="font-bold p-2 bg-white border-2 border-text-color rounded-lg focus:shadow-sketchy focus:-translate-x-[2px] focus:-translate-y-[2px]"
+                                        aria-label="Trier l'historique"
                                     >
                                         <option value="recent">Récent</option>
                                         <option value="closest">Plus proche</option>
@@ -948,8 +1046,8 @@ function App() {
                             <div className="max-h-[calc(100vh-450px)] overflow-y-auto pr-2">
                                 {history.filter((h) => h.player === myPlayerId).length === 0 ? (
                                     <div className="text-center py-8">
-                                        <div className="text-5xl mb-2 opacity-50">
-                                            <ICONS.Pencil />
+                                        <div className="text-5xl mb-2 opacity-50 flex justify-center">
+                                            <FaPencilAlt />
                                         </div>
                                         <p className="font-bold">Aucune proposition...</p>
                                     </div>
@@ -969,16 +1067,16 @@ function App() {
                                     {history
                                         .filter((h) => h.player !== myPlayerId)
                                         .slice(-12)
-                                        .map((entry, index) => (
+                                        .map((entry) => (
                                             <div key={`${entry.player}-${entry.guess}-${entry.timestamp}`} className="bg-white rounded-lg p-1 text-center border-2 border-text-color">
                                                 <div className="font-mono text-sm font-bold">
                                                     {entry.guess.split('').map((digit, i) => (
                                                         <span
                                                             key={i}
-                                                            className={entry.wellPlacedDigits.includes(i) ? 'text-[var(--green-color)]' : entry.misplacedDigits.includes(i) ? 'text-[var(--accent-color)]' : ''}
+                                                            className={(entry.wellPlacedDigits || []).includes(i) ? 'text-[var(--green-color)]' : (entry.misplacedDigits || []).includes(i) ? 'text-[var(--accent-color)]' : ''}
                                                         >
-                              {digit}
-                            </span>
+                                                            {digit}
+                                                        </span>
                                                     ))}
                                                 </div>
                                                 <div className="flex justify-center gap-1 text-xs">
@@ -997,8 +1095,8 @@ function App() {
 
                 {gameState === 'won' && (
                     <div className="max-w-lg mx-auto mt-12 bg-white rounded-2xl p-12 border-4 border-text-color shadow-sketchy text-center">
-                        <div className="text-8xl mb-4 text-[var(--accent-color)]">
-                            <ICONS.Trophy />
+                        <div className="text-8xl mb-4 text-[var(--accent-color)] flex justify-center">
+                            <FaTrophy />
                         </div>
                         <h2 className="text-6xl font-black mb-6">GAGNÉ !</h2>
                         <p className="font-bold text-lg mb-8">{message}</p>
@@ -1007,10 +1105,10 @@ function App() {
                                 Relancer
                             </button>
                             <button
-                                onClick={() => window.location.reload()}
+                                onClick={endGameAndNewRoom}
                                 className="btn-sketchy flex-1 bg-[var(--primary-color)] text-white p-4 rounded-xl text-xl"
                             >
-                                Lobby
+                                Nouvelle Partie
                             </button>
                         </div>
                     </div>
