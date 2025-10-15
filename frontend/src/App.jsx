@@ -107,11 +107,19 @@ function App() {
 
             const stored = JSON.parse(localStorage.getItem('chiffrioState'));
             if (stored && stored.roomId && stored.uuid && stored.pseudo) {
-                setPseudo(stored.pseudo);
-                setRoomId(stored.roomId);
-                setUuid(stored.uuid);
-                setMyPlayerId(stored.playerId);
-                socket.emit('reconnectToRoom', { pseudo: stored.pseudo, roomId: stored.roomId, uuid: stored.uuid });
+                // Vérifier si la session n'est pas trop ancienne (3 minutes)
+                const sessionAge = Date.now() - (stored.timestamp || 0);
+                if (sessionAge < 180000) { // 3 minutes
+                    setPseudo(stored.pseudo);
+                    setRoomId(stored.roomId);
+                    setUuid(stored.uuid);
+                    setMyPlayerId(stored.playerId);
+                    socket.emit('reconnectToRoom', { pseudo: stored.pseudo, roomId: stored.roomId, uuid: stored.uuid });
+                } else {
+                    // Session trop ancienne, on nettoie
+                    localStorage.removeItem('chiffrioState');
+                    setMessage('Session expirée. Bienvenue !');
+                }
             }
         });
 

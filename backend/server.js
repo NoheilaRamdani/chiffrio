@@ -207,13 +207,20 @@ io.on('connection', (socket) => {
         }
     });
 
+
     socket.on('reconnectToRoom', ({ pseudo, roomId, uuid }) => {
         try {
             const room = rooms[roomId.toUpperCase()];
-            if (!room) return socket.emit('error', 'Salle non trouvée');
+            if (!room) {
+                socket.emit('error', 'Salle non trouvée ou expirée');
+                return;
+            }
 
             const player = room.players.find(p => p.uuid === uuid && p.pseudo === pseudo);
-            if (!player) return socket.emit('error', 'Joueur non reconnu');
+            if (!player) {
+                socket.emit('error', 'Joueur non reconnu dans cette salle');
+                return;
+            }
 
             player.socketId = socket.id;
             player.connected = true;
@@ -237,7 +244,7 @@ io.on('connection', (socket) => {
             console.log(`✅ ${pseudo} reconnnecté à ${roomId}`);
         } catch (e) {
             console.error("Erreur dans reconnectToRoom:", e);
-            socket.emit('error', "Une erreur interne est survenue.");
+            socket.emit('error', "Impossible de reconnecter à cette salle");
         }
     });
 
