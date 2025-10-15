@@ -68,7 +68,6 @@ function App() {
     const notepadInputs = useRef([]);
     const submitTimeoutRef = useRef(null);
 
-    // AJOUTÉ : Fonction pour réinitialiser proprement l'état et retourner à l'accueil
     const resetToHome = (msg) => {
         setGameState('home');
         setRoomId('');
@@ -85,7 +84,6 @@ function App() {
         setMessage(msg || 'Prêt pour une nouvelle partie !');
         localStorage.removeItem('chiffrioState');
     };
-
 
     const resetGuessAndNotepad = (digits) => {
         setGuess(Array(digits).fill(''));
@@ -107,16 +105,14 @@ function App() {
 
             const stored = JSON.parse(localStorage.getItem('chiffrioState'));
             if (stored && stored.roomId && stored.uuid && stored.pseudo) {
-                // Vérifier si la session n'est pas trop ancienne (3 minutes)
                 const sessionAge = Date.now() - (stored.timestamp || 0);
-                if (sessionAge < 180000) { // 3 minutes
+                if (sessionAge < 180000) {
                     setPseudo(stored.pseudo);
                     setRoomId(stored.roomId);
                     setUuid(stored.uuid);
                     setMyPlayerId(stored.playerId);
                     socket.emit('reconnectToRoom', { pseudo: stored.pseudo, roomId: stored.roomId, uuid: stored.uuid });
                 } else {
-                    // Session trop ancienne, on nettoie
                     localStorage.removeItem('chiffrioState');
                     setMessage('Session expirée. Bienvenue !');
                 }
@@ -160,7 +156,8 @@ function App() {
                 pseudo,
                 roomId: data.roomId,
                 playerId: 1,
-                uuid: data.uuid
+                uuid: data.uuid,
+                timestamp: Date.now()
             }));
             localStorage.setItem('chiffrioLastSettings', JSON.stringify(newSettings));
         });
@@ -181,7 +178,8 @@ function App() {
                 pseudo,
                 roomId: data.roomId,
                 playerId: 2,
-                uuid: data.uuid
+                uuid: data.uuid,
+                timestamp: Date.now()
             }));
             localStorage.setItem('chiffrioLastSettings', JSON.stringify(newSettings));
         });
@@ -321,7 +319,6 @@ function App() {
             setMessage(`${disconnectedPseudo} s'est déconnecté.`);
         });
 
-        // AJOUTÉ: Gestionnaire pour la fin de partie initiée par l'autre joueur
         socket.on('gameEndedByHost', () => {
             console.log("🎬 L'adversaire a mis fin à la partie.");
             resetToHome("Ton adversaire a lancé une nouvelle partie. Tu as été renvoyé à l'accueil.");
@@ -334,20 +331,20 @@ function App() {
             setUuid(data.uuid);
             setGameState('hosting');
             setMessage(`Nouvelle partie créée ! Code: ${data.roomId}`);
-            setPlayers({ player1: pseudo, player2: '' }); // CHANGÉ : On réinitialise player2
+            setPlayers({ player1: pseudo, player2: '' });
             const newSettings = data.gameSettings;
             setGameSettings(newSettings);
             setSavedSettings(newSettings);
             resetAllInputs(newSettings.digits);
-            setHistory([]); // AJOUTÉ : Vider l'historique
-            setNotepadEntries([]); // AJOUTÉ : Vider le bloc-notes
-            setEliminatedDigits(new Set()); // AJOUTÉ : Vider les chiffres éliminés
-
+            setHistory([]);
+            setNotepadEntries([]);
+            setEliminatedDigits(new Set());
             localStorage.setItem('chiffrioState', JSON.stringify({
                 pseudo,
                 roomId: data.roomId,
                 playerId: 1,
-                uuid: data.uuid
+                uuid: data.uuid,
+                timestamp: Date.now()
             }));
             localStorage.setItem('chiffrioLastSettings', JSON.stringify(newSettings));
         });
@@ -366,13 +363,10 @@ function App() {
             socket.off('gameRestarted');
             socket.off('settingsUpdated');
             socket.off('playerDisconnected');
+            socket.off('gameEndedByHost');
             socket.off('newRoomCreatedAfterEnd');
-            socket.off('gameEndedByHost'); // AJOUTÉ : Nettoyage de l'écouteur
         };
     }, [myPlayerId, pseudo, players, gameSettings.digits]);
-
-    // ... (le reste du composant reste identique)
-    // ... (all other functions: createRoom, joinRoom, handleGuessSubmit, etc. remain the same)
 
     useEffect(() => {
         const isEqual = JSON.stringify(gameSettings) === JSON.stringify(savedSettings);
@@ -746,7 +740,6 @@ function App() {
             </div>
         </div>
     );
-    // ... (le JSX de retour reste identique jusqu'à la fin)
 
     return (
         <div className="min-h-screen">
