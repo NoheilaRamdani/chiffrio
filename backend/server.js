@@ -129,8 +129,6 @@ const validateGameSettings = (settings) => {
     return true;
 };
 
-// ... (routes /test et /health inchangées)
-
 io.on('connection', (socket) => {
     console.log('✅ Nouvelle connexion:', socket.id);
 
@@ -207,7 +205,6 @@ io.on('connection', (socket) => {
         }
     });
 
-
     socket.on('reconnectToRoom', ({ pseudo, roomId, uuid }) => {
         try {
             const room = rooms[roomId.toUpperCase()];
@@ -241,7 +238,7 @@ io.on('connection', (socket) => {
             if (otherPlayer && otherPlayer.connected) {
                 io.to(otherPlayer.socketId).emit('playerReconnected', { pseudo });
             }
-            console.log(`✅ ${pseudo} reconnnecté à ${roomId}`);
+            console.log(`✅ ${pseudo} reconnecté à ${roomId}`);
         } catch (e) {
             console.error("Erreur dans reconnectToRoom:", e);
             socket.emit('error', "Impossible de reconnecter à cette salle");
@@ -264,7 +261,6 @@ io.on('connection', (socket) => {
             if (!playerInRoom) return socket.emit('error', 'Joueur non trouvé dans la salle');
 
             playerInRoom.secret = secret;
-            // CHANGÉ : Utilisation du playerId comme clé au lieu du socket.id
             room.secrets[playerId] = secret;
 
             io.to(roomId).emit('secretSet', { player });
@@ -283,11 +279,11 @@ io.on('connection', (socket) => {
     });
 
     socket.on('submitGuess', ({ guess, player }) => {
-        try { // AJOUTÉ : Bloc try...catch pour la robustesse
+        try {
             const playerInfo = playerSockets.get(socket.id);
             if (!playerInfo) return socket.emit('error', 'Joueur non trouvé');
 
-            const { roomId, playerId } = playerInfo;
+            const {roomId, playerId} = playerInfo;
             const room = rooms[roomId];
             if (!room) return socket.emit('error', 'Salle non trouvée');
             if (playerId !== room.currentPlayer) return socket.emit('error', 'Ce n\'est pas votre tour de jouer.');
@@ -298,9 +294,8 @@ io.on('connection', (socket) => {
             const opponent = room.players.find(p => p.playerId !== playerId);
             if (!opponent) return socket.emit('error', 'Adversaire non trouvé');
 
-            // CHANGÉ : Récupération du secret via le playerId de l'opposant
             const opponentSecret = room.secrets[opponent.playerId];
-            if(!opponentSecret) return socket.emit('error', 'Secret de l\'adversaire non défini, l\'adversaire doit se reconnecter.');
+            if (!opponentSecret) return socket.emit('error', 'Secret de l\'adversaire non défini, l\'adversaire doit se reconnecter.');
 
             const feedback = checkGuess(opponentSecret, guess, room.gameSettings);
 
@@ -322,7 +317,28 @@ io.on('connection', (socket) => {
 
             if (feedback.wellPlaced === room.gameSettings.digits) {
                 room.gameState = 'won';
-                // L'événement 'gameWon' était redondant, le client le gère déjà via 'feedback'
+
+                // Envoyer les bonnes infos à chaque joueur
+                const winner = room.players.find(p => p.playerId === playerId);
+                const loser = room.players.find(p => p.playerId !== playerId);
+
+                // Au gagnant : son secret + le secret qu'il a trouvé
+                io.to(winner.socketId).emit('gameWon', {
+                    winner: playerId,
+                    mySecret: room.secrets[playerId],
+                    opponentSecret: opponentSecret,
+                    fullHistory: room.history
+                });
+
+                // Au perdant : son secret + le secret du gagnant
+                io.to(loser.socketId).emit('gameWon', {
+                    winner: playerId,
+                    mySecret: room.secrets[loser.playerId],
+                    opponentSecret: room.secrets[playerId],
+                    fullHistory: room.history
+                });
+
+                console.log(`🏆 Joueur ${playerId} a gagné dans la salle ${roomId}`);
             } else {
                 room.currentPlayer = room.currentPlayer === 1 ? 2 : 1;
             }
@@ -345,7 +361,7 @@ io.on('connection', (socket) => {
             room.players.forEach(player => {
                 player.secret = null;
             });
-            room.secrets = {}; // CHANGÉ : Vider l'objet des secrets
+            room.secrets = {};
             room.history = [];
             room.gameState = 'setup';
             room.currentPlayer = null;
@@ -369,7 +385,7 @@ io.on('connection', (socket) => {
             room.players.forEach(player => {
                 player.secret = null;
             });
-            room.secrets = {}; // CHANGÉ : Vider l'objet des secrets
+            room.secrets = {};
 
             io.to(roomId).emit('gameRestarted');
             console.log(`🔄 Salle ${roomId} relancée.`);
@@ -379,8 +395,54 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('endGameAndNewRoom', ({ pseudo, gameSettings }) => {
+        try {
+            const playerInfo = playerSockets.get(socket.id);
+            if (!playerInfo) return socket.emit('error', 'Joueur non trouvé');
+            if (playerInfo.playerId !== 1) return socket.emit('error', 'Seul l\'hôte peut créer une nouvelle partie');
+
+            const oldRoomId = playerInfo.roomId;
+            const oldRoom = rooms[oldRoomId];
+            if (oldRoom) {
+                io.to(oldRoomId).emit('gameEndedByHost');
+                delete rooms[oldRoomId];
+                console.log(`🗑️ Salle ${oldRoomId} supprimée`);
+            }
+
+            const pseudoValidation = validatePseudo(pseudo);
+            if (!pseudoValidation.valid) return socket.emit('error', pseudoValidation.error);
+            if (!validateGameSettings(gameSettings)) return socket.emit('error', 'Paramètres de jeu invalides');
+
+            const roomId = generateRoomId();
+            const playerUuid = uuidv4();
+            rooms[roomId] = {
+                players: [{
+                    socketId: socket.id,
+                    uuid: playerUuid,
+                    pseudo: pseudoValidation.pseudo,
+                    secret: null,
+                    connected: true,
+                    playerId: 1
+                }],
+                secrets: {},
+                gameSettings: { ...gameSettings },
+                history: [],
+                currentPlayer: null,
+                gameState: 'hosting',
+                createdAt: Date.now()
+            };
+
+            playerSockets.set(socket.id, { roomId, playerId: 1, uuid: playerUuid });
+            socket.join(roomId);
+            socket.emit('newRoomCreatedAfterEnd', { roomId, gameSettings: rooms[roomId].gameSettings, uuid: playerUuid });
+            console.log(`✅ Nouvelle salle ${roomId} créée par ${pseudoValidation.pseudo}`);
+        } catch (e) {
+            console.error("Erreur dans endGameAndNewRoom:", e);
+            socket.emit('error', "Une erreur interne est survenue.");
+        }
+    });
+
     socket.on('disconnect', () => {
-        // ... (partie disconnect inchangée)
         console.log('❌ Déconnexion:', socket.id);
 
         const playerInfo = playerSockets.get(socket.id);
@@ -419,18 +481,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// ... (setInterval et listen inchangés)
-
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Serveur démarré sur le port ${PORT}`);
-    console.log(`📡 Socket.IO prêt`);
-});
-
-process.on('uncaughtException', (error) => {
-    console.error('❌ Uncaught Exception:', error);
-});
-
-process.on('unhandledRejection', (error) => {
-    console.error('❌ Unhandled Rejection:', error);
 });

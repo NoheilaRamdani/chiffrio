@@ -33,7 +33,12 @@ function App() {
     const [history, setHistory] = useState([]);
     const [message, setMessage] = useState('Trouve le code secret de ton adversaire !');
     const [errorMessage, setErrorMessage] = useState('');
-    const [players, setPlayers] = useState({ player1: '', player2: '' });
+    const [players, setPlayers] = useState({
+        player1: '',
+        player2: '',
+        mySecret: '',
+        opponentSecret: '',
+    });
     const [myPlayerId, setMyPlayerId] = useState(null);
     const [uuid, setUuid] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(1);
@@ -74,7 +79,7 @@ function App() {
         setPlayerSecret(Array(gameSettings.digits).fill(''));
         setGuess(Array(gameSettings.digits).fill(''));
         setHistory([]);
-        setPlayers({ player1: '', player2: '' });
+        setPlayers({ player1: '', player2: '', mySecret: '', opponentSecret: '' });
         setMyPlayerId(null);
         setUuid(null);
         setImReady(false);
@@ -196,6 +201,7 @@ function App() {
             setMessage('Reconnecté à la partie !');
             if (data.mySecret) {
                 setPlayerSecret(data.mySecret.split(''));
+                setPlayers((prev) => ({ ...prev, mySecret: data.mySecret }));
                 setImReady(true);
             } else {
                 resetAllInputs(data.gameSettings.digits);
@@ -283,14 +289,27 @@ function App() {
             });
 
             if (data.feedback.wellPlaced === gameSettings.digits) {
-                setGameState('won');
-                setMessage(`Bravo ${getPlayerName(data.player)} ! Tu as gagné !`);
+                // La gestion de la victoire est déplacée dans l'événement 'gameWon'
             } else {
                 setCurrentPlayer(data.player === 1 ? 2 : 1);
                 setIsMyTurn(data.player !== myPlayerId);
                 setGuess(Array(gameSettings.digits).fill(''));
                 setMessage(`C'est au tour de ${getPlayerName(data.player === 1 ? 2 : 1)}.`);
             }
+        });
+
+        socket.on('gameWon', (data) => {
+            console.log('🏆 Partie gagnée:', data);
+            setGameState('won');
+            // Stocker le winner pour l'affichage
+            setCurrentPlayer(data.winner); // Utiliser currentPlayer pour stocker temporairement le winner
+            setMessage(`Bravo ${getPlayerName(data.winner)} ! Tu as remportes cette partie !`);
+            setPlayers((prev) => ({
+                ...prev,
+                mySecret: data.mySecret,
+                opponentSecret: data.opponentSecret,
+            }));
+            setHistory(data.fullHistory);
         });
 
         socket.on('gameRestarted', () => {
@@ -314,9 +333,9 @@ function App() {
             setMessage("Les règles ont été mises à jour par l'hôte.");
         });
 
-        socket.on('playerDisconnected', ({ pseudo: disconnectedPseudo }) => {
-            console.log('⚠️ Joueur déconnecté:', disconnectedPseudo);
-            setMessage(`${disconnectedPseudo} s'est déconnecté.`);
+        socket.on('playerDisconnected', ({ pseudo }) => {
+            console.log('⚠️ Joueur déconnecté:', pseudo);
+            setMessage(`${pseudo} s'est déconnecté.`);
         });
 
         socket.on('gameEndedByHost', () => {
@@ -331,7 +350,7 @@ function App() {
             setUuid(data.uuid);
             setGameState('hosting');
             setMessage(`Nouvelle partie créée ! Code: ${data.roomId}`);
-            setPlayers({ player1: pseudo, player2: '' });
+            setPlayers({ player1: pseudo, player2: '', mySecret: '', opponentSecret: '' });
             const newSettings = data.gameSettings;
             setGameSettings(newSettings);
             setSavedSettings(newSettings);
@@ -360,6 +379,7 @@ function App() {
             socket.off('secretSet');
             socket.off('gameStart');
             socket.off('feedback');
+            socket.off('gameWon');
             socket.off('gameRestarted');
             socket.off('settingsUpdated');
             socket.off('playerDisconnected');
@@ -1095,21 +1115,146 @@ function App() {
                 )}
 
                 {gameState === 'won' && (
-                    <div className="max-w-lg mx-auto mt-12 bg-white rounded-2xl p-12 border-4 border-text-color shadow-sketchy text-center">
-                        <div className="text-8xl mb-4 text-[var(--accent-color)] flex justify-center">
-                            <FaTrophy />
+                    <div className="max-w-6xl mx-auto mt-12">
+                        {/* Header de victoire */}
+                        <div className="bg-white rounded-2xl p-8 border-4 border-text-color shadow-sketchy text-center mb-6">
+                            <div className="text-8xl mb-4 text-[var(--accent-color)] flex justify-center">
+                                <FaTrophy />
+                            </div>
+                            <h2 className="text-6xl font-black mb-4">
+                                {myPlayerId === currentPlayer ? "🎉 TU AS GAGNÉ !" : "😔 DÉFAITE"}
+                            </h2>
+                            <p className="font-bold text-2xl">{message}</p>
                         </div>
-                        <h2 className="text-6xl font-black mb-6">GAGNÉ !</h2>
-                        <p className="font-bold text-lg mb-8">{message}</p>
+
+                        {/* Section des secrets révélés */}
+                        <div className="grid grid-cols-2 gap-6 mb-6">
+                            <div className="bg-white rounded-2xl p-6 border-4 border-[var(--primary-color)] shadow-sketchy">
+                                <h3 className="font-black text-2xl mb-4 text-center">🔓 Ton Secret</h3>
+                                <div className="text-center">
+                                    <p className="font-mono text-6xl font-black tracking-wider text-[var(--primary-color)]">
+                                        {players.mySecret}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-2xl p-6 border-4 border-[var(--accent-color)] shadow-sketchy">
+                                <h3 className="font-black text-2xl mb-4 text-center">🔓 Secret de {getOpponentName()}</h3>
+                                <div className="text-center">
+                                    <p className="font-mono text-6xl font-black tracking-wider text-[var(--accent-color)]">
+                                        {players.opponentSecret}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Historique complet avec feedbacks détaillés */}
+                        <div className="bg-white rounded-2xl p-6 border-4 border-text-color shadow-sketchy mb-6">
+                            <h3 className="font-black text-3xl mb-4 text-center">📊 Récapitulatif de la partie</h3>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                {/* Ton historique */}
+                                <div>
+                                    <h4 className="font-black text-xl mb-3 text-[var(--primary-color)]">
+                                        Tes tentatives ({history.filter(h => h.player === myPlayerId).length})
+                                    </h4>
+                                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                                        {history
+                                            .filter(h => h.player === myPlayerId)
+                                            .map((entry, idx) => (
+                                                <div key={idx} className="bg-white p-3 rounded-lg border-3 border-text-color shadow-sketchy-sm">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-sm font-bold text-gray-500">Essai #{idx + 1}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                <span className="font-mono text-2xl font-black">
+                                    {entry.guess.split('').map((digit, i) => (
+                                        <span
+                                            key={i}
+                                            className={
+                                                (entry.wellPlacedDigits || []).includes(i)
+                                                    ? 'text-[var(--green-color)]'
+                                                    : (entry.misplacedDigits || []).includes(i)
+                                                        ? 'text-[var(--accent-color)]'
+                                                        : ''
+                                            }
+                                        >
+                                            {digit}
+                                        </span>
+                                    ))}
+                                </span>
+                                                        <div className="flex gap-2">
+                                    <span className="bg-green-200 text-green-800 px-3 py-1 rounded-lg font-bold border-2 border-[var(--green-color)]">
+                                        ✓ {entry.wellPlaced || entry.feedback?.wellPlaced || 0}
+                                    </span>
+                                                            {gameSettings.showMisplaced && (
+                                                                <span className="bg-yellow-200 text-accent-color px-3 py-1 rounded-lg font-bold border-2 border-[var(--accent-color)]">
+                                            ↻ {entry.misplaced || entry.feedback?.misplaced || 0}
+                                        </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        }
+                                    </div>
+                                </div>
+
+                                {/* Historique adversaire */}
+                                <div>
+                                    <h4 className="font-black text-xl mb-3 text-[var(--accent-color)]">
+                                        Tentatives de {getOpponentName()} ({history.filter(h => h.player !== myPlayerId).length})
+                                    </h4>
+                                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                                        {history
+                                            .filter(h => h.player !== myPlayerId)
+                                            .map((entry, idx) => (
+                                                <div key={idx} className="bg-white p-3 rounded-lg border-3 border-text-color shadow-sketchy-sm">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-sm font-bold text-gray-500">Essai #{idx + 1}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                <span className="font-mono text-2xl font-black">
+                                    {entry.guess.split('').map((digit, i) => (
+                                        <span
+                                            key={i}
+                                            className={
+                                                (entry.wellPlacedDigits || []).includes(i)
+                                                    ? 'text-[var(--green-color)]'
+                                                    : (entry.misplacedDigits || []).includes(i)
+                                                        ? 'text-[var(--accent-color)]'
+                                                        : ''
+                                            }
+                                        >
+                                            {digit}
+                                        </span>
+                                    ))}
+                                </span>
+                                                        <div className="flex gap-2">
+                                    <span className="bg-green-200 text-green-800 px-3 py-1 rounded-lg font-bold border-2 border-[var(--green-color)]">
+                                        ✓ {entry.wellPlaced || entry.feedback?.wellPlaced || 0}
+                                    </span>
+                                                            {gameSettings.showMisplaced && (
+                                                                <span className="bg-yellow-200 text-accent-color px-3 py-1 rounded-lg font-bold border-2 border-[var(--accent-color)]">
+                                            ↻ {entry.misplaced || entry.feedback?.misplaced || 0}
+                                        </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Boutons d'action */}
                         <div className="flex gap-4">
-                            <button onClick={handleRestart} className="btn-sketchy flex-1 bg-[var(--accent-color)] text-text-color p-4 rounded-xl text-xl">
-                                Relancer
+                            <button onClick={handleRestart} className="btn-sketchy flex-1 bg-[var(--accent-color)] text-text-color p-4 rounded-xl text-xl font-black">
+                                🔄 Rejouer avec les mêmes règles
                             </button>
-                            <button
-                                onClick={endGameAndNewRoom}
-                                className="btn-sketchy flex-1 bg-[var(--primary-color)] text-white p-4 rounded-xl text-xl"
-                            >
-                                Nouvelle Partie
+                            <button onClick={endGameAndNewRoom} className="btn-sketchy flex-1 bg-[var(--primary-color)] text-white p-4 rounded-xl text-xl font-black">
+                                ➕ Nouvelle Partie
                             </button>
                         </div>
                     </div>
@@ -1118,5 +1263,4 @@ function App() {
         </div>
     );
 }
-
 export default App;
